@@ -1,7 +1,7 @@
 export default {
   "LMS": {
     "path": "/lms",
-    "component": "@/modules/lms/ParentLayout.vue",
+    "component": "@/modules/lms/client/ParentLayout.vue",
     "redirect": "LMSDashboard",
     "meta": {
       "requiresAuth": true
@@ -9,7 +9,7 @@ export default {
   },
   "LMSDashboard": {
     "path": "/lms/dashboard",
-    "component": "@/modules/lms/Dashboard/DashboardView.vue",
+    "component": "@/modules/lms/client/Dashboard/DashboardView.vue",
     "meta": {
       "title": "Дашборд LMS",
       "requiresAuth": true
@@ -17,7 +17,7 @@ export default {
   },
   "LMSCatalog": {
     "path": "/lms/catalog",
-    "component": "@/modules/lms/Catalog/CatalogView.vue",
+    "component": "@/modules/lms/client/Catalog/CatalogView.vue",
     "meta": {
       "title": "Каталог курсов",
       "requiresAuth": true
@@ -25,7 +25,7 @@ export default {
   },
   "LMSCourses": {
     "path": "/lms/courses",
-    "component": "@/modules/lms/Courses/CoursesView.vue",
+    "component": "@/modules/lms/client/Courses/CoursesView.vue",
     "meta": {
       "title": "Мои курсы",
       "requiresAuth": true
@@ -33,7 +33,7 @@ export default {
   },
   "LMSGrades": {
     "path": "/lms/grades",
-    "component": "@/modules/lms/Grades/GradesView.vue",
+    "component": "@/modules/lms/client/Grades/GradesView.vue",
     "meta": {
       "title": "Оценки",
       "requiresAuth": true
@@ -41,7 +41,7 @@ export default {
   },
   "LMSCalendar": {
     "path": "/lms/calendar",
-    "component": "@/modules/lms/Calendar/CalendarView.vue",
+    "component": "@/modules/lms/client/Calendar/CalendarView.vue",
     "meta": {
       "title": "Календарь LMS",
       "requiresAuth": true
@@ -49,7 +49,7 @@ export default {
   },
   "LMSBadges": {
     "path": "/lms/badges",
-    "component": "@/modules/lms/Badges/BadgesView.vue",
+    "component": "@/modules/lms/client/Badges/BadgesView.vue",
     "meta": {
       "title": "Достижения",
       "requiresAuth": true
@@ -57,7 +57,7 @@ export default {
   },
   "LMSLessonsManagement": {
     "path": "/lms/lessons-management",
-    "component": "@/modules/lms/LessonsManagement/LessonsManagementView.vue",
+    "component": "@/modules/lms/client/LessonsManagement/LessonsManagementView.vue",
     "meta": {
       "title": "Управление курсами",
       "requiresAuth": true
@@ -65,7 +65,7 @@ export default {
   },
   "LMSCategoriesAndFormats": {
     "path": "/lms/categories-and-formats",
-    "component": "@/modules/lms/CategoriesAndFormats/CategoriesAndFormatsView.vue",
+    "component": "@/modules/lms/client/CategoriesAndFormats/CategoriesAndFormatsView.vue",
     "meta": {
       "title": "Структура курсов",
       "requiresAuth": true
@@ -73,7 +73,7 @@ export default {
   },
   "LMSCourseView": {
     "path": "/lms/course/:id",
-    "component": "@/modules/lms/Courses/CourseView.vue",
+    "component": "@/modules/lms/client/Courses/CourseView.vue",
     "meta": {
       "title": "Просмотр курса",
       "requiresAuth": true
