@@ -123,7 +123,7 @@ async function loadStudentDashboardData() {
     console.log('👤 Пользователь загружен:', userRole.currentUser.value.user?.username)
     
     // Импортируем необходимые API
-    const { lmsApi } = await import('@/modules/lms/js/lmsApi')
+    const { lmsApi } = await import('../js/lmsApi')
     const { apiClient } = await import('@/js/api/manager')
     const { endpoints } = await import('@/js/api/endpoints')
     

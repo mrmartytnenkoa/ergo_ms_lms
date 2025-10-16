@@ -1,5 +1,5 @@
-import { apiClient } from '../../../js/api/manager'
-import { endpoints } from '../../../js/api/endpoints'
+import { apiClient } from '@/js/api/manager'
+import { endpoints } from '@/js/api/endpoints'
 
 /**
  * API для работы с вопросами

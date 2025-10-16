@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
-import { lmsService } from '@/modules/lms/js/lmsService'
-import { useNotifications } from './useNotifications'
+import { lmsService } from '../js/lmsService'
+import { useNotifications } from '@/js/utils/useNotifications'
 
 const { showError, showSuccess } = useNotifications()
 

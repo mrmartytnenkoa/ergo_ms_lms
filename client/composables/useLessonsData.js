@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { lmsService } from '@/modules/lms/js/lmsService'
+import { lmsService } from '../js/lmsService'
 import { showError } from '@/js/utils/notifications'
 
 export function useLessonsData() {
