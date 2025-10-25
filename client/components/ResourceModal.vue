@@ -284,8 +284,8 @@
 
 <script>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { apiManager } from '@/js/api/manager.js'
-import { handleApiError } from '@/js/utils/errorHandling.js'
+import { apiClient as apiManager } from '@/js/api/manager.js'
+import { handleApiError } from '@/js/utils/notifications.js'
 
 export default {
   name: 'ResourceModal',

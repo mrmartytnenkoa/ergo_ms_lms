@@ -244,7 +244,7 @@ import {
 } from 'lucide-vue-next'
 import { apiClient } from '@/js/api/manager'
 import { endpoints } from '@/js/api/endpoints'
-import { lmsApi } from '@/modules/lms/js/lmsApi'
+import { lmsApi } from '../js/lmsApi'
 import { globalUserRole } from '../composables/useUserRole'
 import LessonModal from '../components/LessonModal.vue'
 
