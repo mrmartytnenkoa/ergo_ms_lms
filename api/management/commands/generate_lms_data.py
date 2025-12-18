@@ -4,6 +4,11 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 import random
 
+# Импорт функций заполнения данных
+from modules.lms.api.migrations.data.populate_categories import populate_categories
+from modules.lms.api.migrations.data.populate_formats import populate_formats
+from modules.lms.api.migrations.data.populate_courses import populate_courses
+
 
 class Command(BaseCommand):
     help = 'Генерирует тестовые данные для LMS системы с IT курсами'
@@ -85,10 +90,11 @@ class Command(BaseCommand):
             self.clear_data(preserve_users=options['preserve_users'])
 
         self.stdout.write('Создание категорий курсов...')
-        categories = self.create_categories()
+        models = self.get_models()
+        categories = populate_categories(models['CourseCategory'])
         
         self.stdout.write('Создание форматов курсов...')
-        formats = self.create_formats()
+        formats = populate_formats(models['CourseFormat'])
         
         self.stdout.write('Создание пользователей...')
         users = self.create_users(options['users'])
@@ -100,7 +106,13 @@ class Command(BaseCommand):
         students = self.create_students(users['students'], groups)
         
         self.stdout.write('Создание IT курсов...')
-        subjects = self.create_it_courses(categories, formats, users['teachers'], options['courses'])
+        subjects = populate_courses(
+            models['Subject'],
+            categories,
+            formats,
+            users['teachers'],
+            options['courses']
+        )
         
         self.stdout.write('Создание тем и уроков...')
         self.create_themes_and_lessons(subjects)
@@ -180,102 +192,6 @@ class Command(BaseCommand):
         models['CourseCategory'].objects.all().delete()
         models['CourseFormat'].objects.all().delete()
 
-    def create_categories(self):
-        """Создание категорий IT курсов"""
-        models = self.get_models()
-        categories_data = [
-            {
-                'name': 'Веб-разработка',
-                'description': 'Курсы по созданию веб-сайтов и веб-приложений',
-                'subcategories': [
-                    {'name': 'Frontend разработка', 'description': 'HTML, CSS, JavaScript, React, Vue.js'},
-                    {'name': 'Backend разработка', 'description': 'Python, Django, Node.js, PHP'},
-                    {'name': 'Full-stack разработка', 'description': 'Комплексная веб-разработка'},
-                ]
-            },
-            {
-                'name': 'Мобильная разработка',
-                'description': 'Разработка мобильных приложений',
-                'subcategories': [
-                    {'name': 'Android разработка', 'description': 'Java, Kotlin, Android Studio'},
-                    {'name': 'iOS разработка', 'description': 'Swift, Objective-C, Xcode'},
-                    {'name': 'Кроссплатформенная разработка', 'description': 'React Native, Flutter'},
-                ]
-            },
-            {
-                'name': 'Data Science',
-                'description': 'Анализ данных и машинное обучение',
-                'subcategories': [
-                    {'name': 'Машинное обучение', 'description': 'ML алгоритмы и модели'},
-                    {'name': 'Анализ данных', 'description': 'Python, R, статистика'},
-                    {'name': 'Большие данные', 'description': 'Hadoop, Spark, NoSQL'},
-                ]
-            },
-            {
-                'name': 'DevOps и инфраструктура',
-                'description': 'Автоматизация и управление инфраструктурой',
-                'subcategories': [
-                    {'name': 'Контейнеризация', 'description': 'Docker, Kubernetes'},
-                    {'name': 'CI/CD', 'description': 'Jenkins, GitLab CI, GitHub Actions'},
-                    {'name': 'Облачные технологии', 'description': 'AWS, Azure, Google Cloud'},
-                ]
-            },
-            {
-                'name': 'Базы данных',
-                'description': 'Проектирование и управление базами данных',
-                'subcategories': [
-                    {'name': 'SQL базы данных', 'description': 'MySQL, PostgreSQL, Oracle'},
-                    {'name': 'NoSQL базы данных', 'description': 'MongoDB, Redis, Cassandra'},
-                ]
-            },
-            {
-                'name': 'Кибербезопасность',
-                'description': 'Защита информации и систем',
-                'subcategories': [
-                    {'name': 'Этичный хакинг', 'description': 'Пентестинг и анализ уязвимостей'},
-                    {'name': 'Сетевая безопасность', 'description': 'Защита сетевой инфраструктуры'},
-                ]
-            }
-        ]
-
-        categories = []
-        for cat_data in categories_data:
-            parent_cat = models['CourseCategory'].objects.create(
-                name=cat_data['name'],
-                description=cat_data['description'],
-                sort_order=len(categories)
-            )
-            categories.append(parent_cat)
-            
-            for i, subcat_data in enumerate(cat_data['subcategories']):
-                subcat = models['CourseCategory'].objects.create(
-                    name=subcat_data['name'],
-                    description=subcat_data['description'],
-                    parent=parent_cat,
-                    sort_order=i
-                )
-                categories.append(subcat)
-
-        return categories
-
-    def create_formats(self):
-        """Создание форматов курсов"""
-        models = self.get_models()
-        formats_data = [
-            {'name': 'Базовый курс', 'description': 'Основательное изучение с нуля'},
-            {'name': 'Интенсив', 'description': 'Быстрое погружение в тему'},
-            {'name': 'Практикум', 'description': 'Практические задания и проекты'},
-            {'name': 'Мастер-класс', 'description': 'Углубленное изучение конкретных техник'},
-            {'name': 'Онлайн-курс', 'description': 'Самостоятельное изучение'},
-            {'name': 'Вебинар', 'description': 'Живые онлайн-занятия'},
-        ]
-
-        formats = []
-        for format_data in formats_data:
-            course_format = models['CourseFormat'].objects.create(**format_data)
-            formats.append(course_format)
-
-        return formats
 
     def create_users(self, count):
         """Создание пользователей: преподавателей и студентов"""
@@ -429,133 +345,6 @@ class Command(BaseCommand):
 
         return students
 
-    def create_it_courses(self, categories, formats, teachers, count):
-        """Создание IT курсов"""
-        models = self.get_models()
-        courses_data = [
-            {
-                'name': 'Основы Python разработки',
-                'description': 'Изучение основ программирования на Python с нуля',
-                'category_keywords': ['backend', 'анализ'],
-                'summary': 'Курс для начинающих разработчиков. Изучите синтаксис Python, основы ООП, работу с библиотеками.',
-            },
-            {
-                'name': 'React.js для начинающих',
-                'description': 'Создание интерактивных пользовательских интерфейсов',
-                'category_keywords': ['frontend'],
-                'summary': 'Изучите современную библиотеку React для создания динамических веб-приложений.',
-            },
-            {
-                'name': 'Django Framework',
-                'description': 'Разработка веб-приложений на Django',
-                'category_keywords': ['backend'],
-                'summary': 'Создание полноценных веб-приложений с помощью популярного Python фреймворка.',
-            },
-            {
-                'name': 'Машинное обучение с Python',
-                'description': 'Введение в ML алгоритмы и библиотеки',
-                'category_keywords': ['машинное', 'анализ'],
-                'summary': 'Освойте основы машинного обучения, работу с scikit-learn, pandas и numpy.',
-            },
-            {
-                'name': 'JavaScript ES6+',
-                'description': 'Современный JavaScript и его возможности',
-                'category_keywords': ['frontend'],
-                'summary': 'Изучите современные возможности JavaScript: arrow functions, async/await, модули.',
-            },
-            {
-                'name': 'Docker и контейнеризация',
-                'description': 'Основы работы с контейнерами',
-                'category_keywords': ['контейнеризация', 'devops'],
-                'summary': 'Изучите Docker, создание образов, работу с Docker Compose и оркестрацию.',
-            },
-            {
-                'name': 'SQL и базы данных',
-                'description': 'Проектирование и работа с реляционными БД',
-                'category_keywords': ['sql'],
-                'summary': 'Основы SQL, проектирование баз данных, оптимизация запросов.',
-            },
-            {
-                'name': 'Vue.js разработка',
-                'description': 'Создание SPA приложений на Vue.js',
-                'category_keywords': ['frontend'],
-                'summary': 'Изучите прогрессивный фреймворк Vue.js для создания современных веб-приложений.',
-            },
-            {
-                'name': 'Node.js Backend',
-                'description': 'Серверная разработка на JavaScript',
-                'category_keywords': ['backend'],
-                'summary': 'Создание REST API и веб-серверов с помощью Node.js и Express.',
-            },
-            {
-                'name': 'Git и система контроля версий',
-                'description': 'Эффективная работа с Git',
-                'category_keywords': ['devops'],
-                'summary': 'Изучите Git: ветвление, слияние, работа в команде, GitHub/GitLab.',
-            },
-            {
-                'name': 'Основы кибербезопасности',
-                'description': 'Защита информации и систем',
-                'category_keywords': ['безопасность', 'этичный'],
-                'summary': 'Основы информационной безопасности, анализ уязвимостей, методы защиты.',
-            },
-            {
-                'name': 'MongoDB и NoSQL',
-                'description': 'Работа с документоориентированными БД',
-                'category_keywords': ['nosql'],
-                'summary': 'Изучите MongoDB: схемы данных, запросы, агрегация, индексирование.',
-            },
-            {
-                'name': 'Android разработка на Kotlin',
-                'description': 'Создание мобильных приложений для Android',
-                'category_keywords': ['android'],
-                'summary': 'Разработка нативных Android приложений с использованием Kotlin и Android Studio.',
-            },
-            {
-                'name': 'AWS Cloud Computing',
-                'description': 'Облачные технологии Amazon Web Services',
-                'category_keywords': ['облачные'],
-                'summary': 'Изучите основные сервисы AWS: EC2, S3, RDS, Lambda и другие.',
-            },
-            {
-                'name': 'Flutter кроссплатформенная разработка',
-                'description': 'Мобильные приложения на Flutter',
-                'category_keywords': ['кроссплатформенная'],
-                'summary': 'Создание приложений для iOS и Android с помощью Flutter и Dart.',
-            }
-        ]
-
-        subjects = []
-        for i in range(min(count, len(courses_data))):
-            course_data = courses_data[i]
-            
-            # Находим подходящую категорию
-            category = None
-            for cat in categories:
-                if any(keyword.lower() in cat.name.lower() for keyword in course_data['category_keywords']):
-                    category = cat
-                    break
-            
-            if not category:
-                category = random.choice([cat for cat in categories if cat.parent is not None])
-
-            subject = models['Subject'].objects.create(
-                name=course_data['name'],
-                description=course_data['description'],
-                summary=course_data['summary'],
-                teacher=random.choice(teachers),
-                category=category,
-                course_format=random.choice(formats),
-                start_date=timezone.now().date() + timedelta(days=random.randint(1, 30)),
-                end_date=timezone.now().date() + timedelta(days=random.randint(60, 120)),
-                is_published=True,
-                is_self_enrollment=random.choice([True, False]),
-                completion_tracking=True,
-                max_enrollment=random.randint(20, 100)
-            )
-            subjects.append(subject)
-
-        return subjects
 
     def create_themes_and_lessons(self, subjects):
         """Создание тем и уроков для курсов"""
