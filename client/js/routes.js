@@ -78,6 +78,14 @@ export default {
       "title": "Просмотр курса",
       "requiresAuth": true
     }
+  },
+  "LMSEmployerInteraction": {
+    "path": "/lms/employer-interaction",
+    "component": "@/modules/lms/client/EmployerInteraction/EmployerInteractionView.vue",
+    "meta": {
+      "title": "Взаимодействие с работодателями",
+      "requiresAuth": true
+    }
   }
 }
 

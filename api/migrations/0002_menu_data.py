@@ -2,7 +2,6 @@
 """
 Миграция данных: заполнение меню модуля LMS.
 
-Структура берётся из modules/lms/client/js/menu-config.json.
 Порядок элементов определяется последовательностью создания.
 """
 
@@ -26,7 +25,6 @@ def populate_menu(apps, schema_editor):
     )
 
     # Дочерние элементы — порядок определяется последовательностью
-    # Список соответствует elements из menu-config.json
     helper.create_routes_batch(
         [
             ('Панель пользователя', 'LMSDashboard'),
@@ -37,6 +35,7 @@ def populate_menu(apps, schema_editor):
             ('Достижения', 'LMSBadges'),
             ('Управление курсами', 'LMSLessonsManagement'),
             ('Структура курсов', 'LMSCategoriesAndFormats'),
+            ('Взаимодействие с работодателями', 'LMSEmployerInteraction'),
         ],
         parent=lms_root,
     )
