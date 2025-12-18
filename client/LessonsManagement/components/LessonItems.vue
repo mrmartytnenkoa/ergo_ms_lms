@@ -16,22 +16,22 @@
     </div>
 
     <!-- Список элементов с drag and drop -->
-    <draggable 
+    <DraggableList 
       v-else
       v-model="sortableItems" 
       group="lesson-items"
       :animation="300"
-      @end="handleReorder"
+      @change="handleReorder"
       item-key="id"
       tag="div"
-      class="lesson-items-list"
+      container-class="lesson-items-list"
       handle=".item-drag-handle"
       :disabled="false"
       ghost-class="sortable-ghost"
       chosen-class="sortable-chosen"
       drag-class="sortable-drag"
     >
-      <template #item="{ element: item }">
+      <template #default="{ element: item }">
         <div class="lesson-item-card mb-3" :data-item-id="item.id">
           <div class="card" :class="getItemCardClass(item)" style="position: relative; z-index: 1;">
             <div class="card-body p-3">
@@ -115,13 +115,13 @@
           </div>
         </div>
       </template>
-    </draggable>
+    </DraggableList>
   </div>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
-import draggable from 'vuedraggable'
+import DraggableList from '../../components/DraggableList.vue'
 import {
   Layers, GripVertical, FileCheck, ClipboardList, Upload,
   MoreVertical, Edit, HelpCircle, Copy, Download, Trash2,
@@ -169,7 +169,7 @@ const sortableItems = computed({
 
 // Обработка изменения порядка
 const handleReorder = (event) => {
-  if (event.oldIndex !== event.newIndex) {
+  if (event.moved && event.moved.oldIndex !== event.moved.newIndex) {
     // Формируем новый порядок элементов
     const reorderedItems = [...sortableItems.value].map((item, index) => ({
       id: item.id,

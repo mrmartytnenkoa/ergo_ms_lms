@@ -94,22 +94,22 @@
             </div>
 
             <div v-else class="accordion" :id="`course-accordion-${courseGroup.course.id}`">
-              <draggable 
+              <DraggableList 
                 v-model="courseGroup.themes" 
                 group="themes"
                 :animation="300"
                 @change="onThemeChange($event, courseGroup.course.id)"
-                @start="onThemeStart"
+                :can-drag="(theme) => !isThemeExpanded(theme.id)"
                 item-key="id"
                 tag="div"
-                class="theme-sortable"
+                container-class="theme-sortable"
                 handle=".theme-drag-handle"
                 :disabled="false"
                 ghost-class="sortable-ghost"
                 chosen-class="sortable-chosen"
                 drag-class="sortable-drag"
               >
-                <template #item="{ element: theme }">
+                <template #default="{ element: theme }">
                   <div class="accordion-item theme-draggable-item"
                        :data-theme-id="theme.id">
                 <h2 class="accordion-header">
@@ -171,22 +171,22 @@
                     </div>
 
                     <div v-else class="lesson-container">
-                      <draggable 
+                      <DraggableList 
                         v-model="theme.lessons" 
                         group="lessons"
                         :animation="300"
                         @change="onLessonChange($event, theme.id)"
-                        @start="onLessonStart"
+                        :can-drag="(lesson) => !isLessonExpanded(lesson.id)"
                         item-key="id"
                         tag="div"
-                        class="lesson-sortable row"
+                        container-class="lesson-sortable row"
                         handle=".lesson-drag-handle"
                         :disabled="false"
                         ghost-class="sortable-ghost"
                         chosen-class="sortable-chosen"
                         drag-class="sortable-drag"
                       >
-                        <template #item="{ element: lesson }">
+                        <template #default="{ element: lesson }">
                           <div class="col-12 mb-4 lesson-draggable-item" :data-lesson-id="lesson.id">
                             <div class="card lesson-card">
                               <div :class="`lesson-type-indicator lesson-type-${lesson.lessontype}`"></div>
@@ -264,7 +264,7 @@
                             </div>
                           </div>
                         </template>
-                      </draggable>
+                      </DraggableList>
                     </div>
 
                     <!-- Форумы темы -->
@@ -321,7 +321,7 @@
                 </div>
                   </div>
                 </template>
-              </draggable>
+              </DraggableList>
             </div>
           </div>
         </div>
@@ -338,7 +338,7 @@ import {
   FileCheck, ClipboardList, Eye, GripVertical, Upload, Download,
   HelpCircle
 } from 'lucide-vue-next'
-import draggable from 'vuedraggable'
+import DraggableList from '../../components/DraggableList.vue'
 import CourseImagePlaceholder from '../../components/CourseImagePlaceholder.vue'
 import LessonItems from './LessonItems.vue'
 import { apiClient } from '@/js/api/manager'
@@ -695,33 +695,8 @@ async function downloadResource(resource) {
   }
 }
 
-// Проверка возможности начала перетаскивания темы
-function onThemeStart(evt) {
-  const themeElement = evt.item
-  const themeId = parseInt(themeElement.dataset.themeId)
-  
-  // Запрещаем перетаскивание если тема раскрыта
-  if (isThemeExpanded(themeId)) {
-    console.log('Запрещено перетаскивание раскрытой темы:', themeId)
-    return false
-  }
-  
-  return true
-}
-
-// Проверка возможности начала перетаскивания урока
-function onLessonStart(evt) {
-  const lessonElement = evt.item
-  const lessonId = parseInt(lessonElement.dataset.lessonId)
-  
-  // Запрещаем перетаскивание если урок раскрыт
-  if (isLessonExpanded(lessonId)) {
-    console.log('Запрещено перетаскивание раскрытого урока:', lessonId)
-    return false
-  }
-  
-  return true
-}
+// Функции onThemeStart и onLessonStart больше не нужны,
+// так как проверка выполняется через проп can-drag
 
 
 
