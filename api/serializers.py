@@ -23,6 +23,7 @@ class UserRoleSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserRole
+        ref_name = 'LmsUserRole'
         fields = '__all__'
 
 class LMSUserProfileSerializer(serializers.ModelSerializer):
@@ -165,6 +166,8 @@ class ThemeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Theme
         fields = '__all__'
+        # Уникальное имя схемы для Swagger, чтобы не конфликтовать с core.settings.ThemeSerializer
+        ref_name = 'LmsThemeSerializer'
     
     def get_lessons_count(self, obj):
         return obj.lesson_set.count()
