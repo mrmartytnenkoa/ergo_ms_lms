@@ -1,8 +1,6 @@
 from django.db import transaction
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.core.mail import send_mail
-from django.conf import settings
 from django.db import models
 from datetime import timedelta
 from typing import List, Dict, Any
@@ -388,36 +386,6 @@ class CalendarService:
                 event_type='deadline',
                 start_date=test.available_until,
                 created_by=test.lesson.theme.subject.teacher
-            )
-
-
-class EmailService:
-    """Сервис для отправки email уведомлений"""
-    
-    @staticmethod
-    def send_welcome_email(user: User):
-        """Отправить приветственное письмо"""
-        if hasattr(settings, 'EMAIL_HOST') and user.email:
-            send_mail(
-                subject='Добро пожаловать в LMS!',
-                message=f'Здравствуйте, {user.get_full_name() or user.username}!\n\n'
-                       'Добро пожаловать в нашу систему обучения.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True
-            )
-    
-    @staticmethod
-    def send_assignment_reminder(user: User, assignment: Assignment):
-        """Отправить напоминание о задании"""
-        if hasattr(settings, 'EMAIL_HOST') and user.email:
-            send_mail(
-                subject=f'Напоминание: {assignment.title}',
-                message=f'Напоминаем о крайнем сроке задания "{assignment.title}"\n'
-                       f'Дата сдачи: {assignment.deadline}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True
             )
 
 

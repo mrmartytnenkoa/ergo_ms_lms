@@ -13,7 +13,7 @@ from .models import (
 from django.db.utils import ProgrammingError, OperationalError, DatabaseError
 from .services import (
     NotificationService, BadgeService, ProgressTrackingService,
-    CalendarService, EmailService, GradingService
+    CalendarService, GradingService
 )
 
 
@@ -26,8 +26,6 @@ def create_user_profile(sender, instance, created, **kwargs):
             UserProfile.objects.get_or_create(user=instance)
         except (ProgrammingError, OperationalError, DatabaseError):
             pass
-        # Отправить приветственное письмо
-        EmailService.send_welcome_email(instance)
 
 
 @receiver(post_save, sender=Grade)
@@ -251,9 +249,6 @@ def send_assignment_reminders():
                 message=f'Завтра истекает срок сдачи задания "{assignment.title}".',
                 related_object_id=assignment.id
             )
-            
-            # Отправить email напоминание
-            EmailService.send_assignment_reminder(student, assignment)
 
 
 def cleanup_old_notifications():
