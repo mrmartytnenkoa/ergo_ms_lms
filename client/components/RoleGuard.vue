@@ -56,6 +56,10 @@ const hasAccess = computed(() => {
           case 'teacher': return userRole.isTeacher.value
           case 'admin': return userRole.isAdmin.value
           case 'moderator': return userRole.isModerator.value
+          case 'applicant': return userRole.isApplicant.value
+          case 'counselor': return userRole.isCounselor.value
+          case 'organizer': return userRole.isOrganizer.value
+          case 'analyst': return userRole.isAnalyst.value
           default: return false
         }
       })

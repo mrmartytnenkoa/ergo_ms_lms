@@ -171,6 +171,25 @@ export function useLessonsData() {
     return Object.values(courseGroups)
   })
   
+  async function loadMockFallback() {
+    try {
+      const mockModule = await import('../js/mockData.js')
+      const mock = mockModule.default.lessonsManagement
+      if (!mock) return
+      courses.value = mock.courses || []
+      themes.value = mock.themes || []
+      lessons.value = mock.lessons || []
+      forums.value = mock.forums || []
+      tests.value = mock.tests || []
+      assignments.value = mock.assignments || []
+      resources.value = mock.resources || []
+      categories.value = mock.categories || []
+      courseFormats.value = mock.courseFormats || []
+    } catch (e) {
+      console.error('Mock fallback load error:', e)
+    }
+  }
+
   async function fetchData() {
     try {
       loading.value = true
@@ -186,18 +205,14 @@ export function useLessonsData() {
       resources.value = data.resources
       categories.value = data.categories
       courseFormats.value = data.courseFormats
+
+      if (courses.value.length === 0) {
+        await loadMockFallback()
+      }
       
     } catch (error) {
       console.error('Ошибка загрузки данных:', error)
-      courses.value = []
-      themes.value = []
-      lessons.value = []
-      forums.value = []
-      tests.value = []
-      assignments.value = []
-      resources.value = []
-      categories.value = []
-      courseFormats.value = []
+      await loadMockFallback()
     } finally {
       loading.value = false
     }

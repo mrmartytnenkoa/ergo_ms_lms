@@ -11,7 +11,11 @@ const isVisible = ref(true)
 const availableRoles = [
   { value: 'student', label: 'Студент', color: 'primary' },
   { value: 'teacher', label: 'Преподаватель', color: 'success' },
-  { value: 'admin', label: 'Администратор', color: 'danger' }
+  { value: 'admin', label: 'Администратор', color: 'danger' },
+  { value: 'applicant', label: 'Абитуриент', color: 'info' },
+  { value: 'counselor', label: 'Специалист по профориентации', color: 'secondary' },
+  { value: 'organizer', label: 'Организатор мероприятий', color: 'warning' },
+  { value: 'analyst', label: 'Аналитик', color: 'dark' }
 ]
 
 async function switchRole(newRole) {

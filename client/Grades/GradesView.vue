@@ -1,260 +1,257 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { BarChart, TrendingUp, Award, BookOpen, FileCheck, Calendar, Download, Filter } from 'lucide-vue-next'
-import { apiClient } from '@/js/api/manager'
-import { endpoints } from '@/js/api/endpoints'
+import {
+  BarChart, TrendingUp, Award, BookOpen, FileCheck,
+  Download, Search, MessageSquare,
+  ClipboardCheck, PenLine, GraduationCap
+} from 'lucide-vue-next'
+import VueApexCharts from 'vue3-apexcharts'
+import { lmsApi } from '../js/lmsApi'
 import RoleGuard from '../components/RoleGuard.vue'
 import { globalUserRole } from '../composables/useUserRole'
+import './grades.scss'
 
 const grades = ref([])
-const enrollments = ref([])
 const loading = ref(true)
-const selectedCourse = ref(null)
-const selectedPeriod = ref('all')
-const userRole = globalUserRole
+const activeTab = ref('all')
+const searchQuery = ref('')
+const expandedCourses = ref({})
 
-// Статистика оценок
-const gradesStats = computed(() => {
-  const filteredGrades = getFilteredGrades()
-  if (filteredGrades.length === 0) return { average: 0, total: 0, excellent: 0, good: 0, satisfactory: 0, poor: 0 }
-  
-  const total = filteredGrades.length
-  const sum = filteredGrades.reduce((acc, grade) => acc + grade.grade, 0)
-  const average = sum / total
-  
-  const excellent = filteredGrades.filter(g => g.grade >= 90).length
-  const good = filteredGrades.filter(g => g.grade >= 70 && g.grade < 90).length
-  const satisfactory = filteredGrades.filter(g => g.grade >= 50 && g.grade < 70).length
-  const poor = filteredGrades.filter(g => g.grade < 50).length
-  
-  return { average, total, excellent, good, satisfactory, poor }
+const tabs = [
+  { key: 'all', label: 'Все' },
+  { key: 'test', label: 'Тесты' },
+  { key: 'assignment', label: 'Задания' },
+  { key: 'manual', label: 'Ручные' }
+]
+
+const statItems = [
+  { key: 'average', label: 'Средний балл', icon: TrendingUp, color: 'primary' },
+  { key: 'total', label: 'Всего оценок', icon: BookOpen, color: 'info' },
+  { key: 'excellent', label: 'Отличных', icon: Award, color: 'success' },
+  { key: 'courses', label: 'Курсов', icon: GraduationCap, color: 'warning' }
+]
+
+const stats = computed(() => {
+  const all = grades.value
+  if (all.length === 0) return { average: 0, total: 0, excellent: 0, courses: 0 }
+  const sum = all.reduce((acc, g) => acc + g.grade, 0)
+  return {
+    average: (sum / all.length).toFixed(1),
+    total: all.length,
+    excellent: all.filter(g => g.grade >= 90).length,
+    courses: [...new Set(all.map(g => g.subject_name))].length
+  }
 })
 
-// Курсы для фильтрации
-const courseOptions = computed(() => {
-  const courses = [...new Set(grades.value.map(g => g.subject_name))]
-  return courses.map(name => ({ value: name, label: name }))
-})
-
-// Фильтрованные оценки
-function getFilteredGrades() {
-  let filtered = grades.value
-  
-  if (selectedCourse.value) {
-    filtered = filtered.filter(g => g.subject_name === selectedCourse.value)
-  }
-  
-  if (selectedPeriod.value !== 'all') {
-    const now = new Date()
-    const cutoffDate = new Date()
-    
-    switch (selectedPeriod.value) {
-      case 'week':
-        cutoffDate.setDate(now.getDate() - 7)
-        break
-      case 'month':
-        cutoffDate.setMonth(now.getMonth() - 1)
-        break
-      case 'semester':
-        cutoffDate.setMonth(now.getMonth() - 6)
-        break
-    }
-    
-    filtered = filtered.filter(g => new Date(g.related) >= cutoffDate)
-  }
-  
-  return filtered.sort((a, b) => new Date(b.related) - new Date(a.related))
+function tabCount(key) {
+  if (key === 'all') return grades.value.length
+  return grades.value.filter(g => g.grade_type === key).length
 }
 
-// Загрузка данных
+const filteredGrades = computed(() => {
+  let result = grades.value
+  if (activeTab.value !== 'all') {
+    result = result.filter(g => g.grade_type === activeTab.value)
+  }
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(g =>
+      g.subject_name?.toLowerCase().includes(q) ||
+      g.assignment_name?.toLowerCase().includes(q) ||
+      g.grader_name?.toLowerCase().includes(q)
+    )
+  }
+  return result.sort((a, b) => new Date(b.related) - new Date(a.related))
+})
+
+const groupedByCourse = computed(() => {
+  const map = {}
+  filteredGrades.value.forEach(g => {
+    if (!map[g.subject_name]) map[g.subject_name] = []
+    map[g.subject_name].push(g)
+  })
+  return Object.entries(map)
+    .map(([name, items]) => {
+      const avg = items.reduce((s, g) => s + g.grade, 0) / items.length
+      return { name, items, average: avg, count: items.length }
+    })
+    .sort((a, b) => b.average - a.average)
+})
+
+const donutOptions = computed(() => ({
+  chart: { type: 'donut', height: 260 },
+  labels: ['Отлично (90+)', 'Хорошо (70-89)', 'Удовл. (50-69)', 'Неудовл. (<50)'],
+  colors: ['#198754', '#0d6efd', '#ffc107', '#dc3545'],
+  legend: { position: 'bottom', fontSize: '13px' },
+  plotOptions: { pie: { donut: { size: '58%' } } },
+  dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + '%' }
+}))
+
+const donutSeries = computed(() => {
+  const all = grades.value
+  return [
+    all.filter(g => g.grade >= 90).length,
+    all.filter(g => g.grade >= 70 && g.grade < 90).length,
+    all.filter(g => g.grade >= 50 && g.grade < 70).length,
+    all.filter(g => g.grade < 50).length
+  ]
+})
+
+const trendOptions = computed(() => ({
+  chart: { type: 'area', height: 260, toolbar: { show: false }, zoom: { enabled: false } },
+  stroke: { curve: 'smooth', width: 2.5 },
+  colors: ['#0d6efd'],
+  fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05 } },
+  xaxis: { categories: trendData.value.labels },
+  yaxis: { min: 0, max: 100, labels: { formatter: (v) => v.toFixed(0) } },
+  dataLabels: { enabled: false },
+  tooltip: { y: { formatter: (v) => v.toFixed(1) + ' баллов' } },
+  grid: { borderColor: '#f1f1f1' }
+}))
+
+const trendData = computed(() => {
+  const all = grades.value
+  if (all.length === 0) return { labels: [], values: [] }
+
+  const byMonth = {}
+  all.forEach(g => {
+    const d = new Date(g.related)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (!byMonth[key]) byMonth[key] = []
+    byMonth[key].push(g.grade)
+  })
+
+  const sorted = Object.keys(byMonth).sort()
+  const monthNames = { '01': 'Янв', '02': 'Фев', '03': 'Мар', '04': 'Апр', '05': 'Май', '06': 'Июн',
+    '07': 'Июл', '08': 'Авг', '09': 'Сен', '10': 'Окт', '11': 'Ноя', '12': 'Дек' }
+
+  const labels = sorted.map(k => monthNames[k.split('-')[1]] || k)
+  const values = sorted.map(k => {
+    const arr = byMonth[k]
+    return arr.reduce((s, v) => s + v, 0) / arr.length
+  })
+
+  return { labels, values }
+})
+
+const trendSeries = computed(() => [{ name: 'Средний балл', data: trendData.value.values }])
+
+function toggleCourse(name) {
+  expandedCourses.value[name] = !expandedCourses.value[name]
+}
+
+function isCourseExpanded(name) {
+  return expandedCourses.value[name] !== false
+}
+
+function getGradeColor(grade) {
+  if (grade >= 90) return 'success'
+  if (grade >= 70) return 'primary'
+  if (grade >= 50) return 'warning'
+  return 'danger'
+}
+
+function getGradeBg(grade) {
+  if (grade >= 90) return 'bg-success-subtle text-success'
+  if (grade >= 70) return 'bg-primary-subtle text-primary'
+  if (grade >= 50) return 'bg-warning-subtle text-warning'
+  return 'bg-danger-subtle text-danger'
+}
+
+function getTypeIcon(type) {
+  switch (type) {
+    case 'test': return ClipboardCheck
+    case 'assignment': return FileCheck
+    default: return PenLine
+  }
+}
+
+function getTypeName(type) {
+  switch (type) {
+    case 'test': return 'Тест'
+    case 'assignment': return 'Задание'
+    case 'manual': return 'Ручная'
+    default: return 'Оценка'
+  }
+}
+
+function getTypeBadgeClass(type) {
+  switch (type) {
+    case 'test': return 'bg-info-subtle text-info'
+    case 'assignment': return 'bg-success-subtle text-success'
+    default: return 'bg-secondary-subtle text-secondary'
+  }
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString('ru', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+async function exportGrades() {
+  const data = filteredGrades.value.map(g => ({
+    'Курс': g.subject_name,
+    'Задание': g.assignment_name || '-',
+    'Оценка': g.grade,
+    'Дата': formatDate(g.related),
+    'Тип': getTypeName(g.grade_type),
+    'Преподаватель': g.grader_name || '-',
+    'Комментарий': g.feedback || '-'
+  }))
+  if (!data.length) return
+  const headers = Object.keys(data[0])
+  const csv = [headers.join(','), ...data.map(r => headers.map(h => `"${r[h]}"`).join(','))].join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = 'my_grades.csv'
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
 async function loadGrades() {
   try {
     loading.value = true
-    
-    let allGrades = []
-    
-    // Загружаем оценки из API
-    try {
-      const gradesResponse = await apiClient.get(`${endpoints.lms.subjects}grades/`, {
-        params: { student: 'me' }
-      })
-      if (gradesResponse.success) {
-        const apiGrades = gradesResponse.data.results || gradesResponse.data || []
-        allGrades = allGrades.concat(apiGrades.map(grade => ({
-          id: grade.id,
-          subject_name: grade.subject?.name || 'Курс не указан',
-          grade: grade.grade,
-          related: grade.related,
-          feedback: grade.feedback,
-          grader_name: grade.grader?.first_name + ' ' + grade.grader?.last_name || 'Преподаватель',
-          grade_type: grade.grade_type || 'manual'
-        })))
-      }
-    } catch (error) {
-      console.warn('Не удалось загрузить основные оценки:', error)
-    }
-    
-    // Загружаем результаты тестов
-    try {
-      const testAttemptsResponse = await apiClient.get(endpoints.lms.testAttempts)
-      if (testAttemptsResponse.success) {
-        const attempts = testAttemptsResponse.data.results || testAttemptsResponse.data || []
-        attempts.forEach(attempt => {
-          if (attempt.score !== null) {
-            allGrades.push({
-              id: `test-${attempt.id}`,
-              subject_name: attempt.test?.subject?.name || 'Тест',
-              grade: attempt.score,
-              related: attempt.completed_at || attempt.started_at,
-              feedback: attempt.is_passed ? 'Тест пройден успешно' : 'Тест не пройден',
-              grader_name: 'Автоматическая проверка',
-              grade_type: 'test'
-            })
-          }
-        })
-      }
-    } catch (error) {
-      console.warn('Не удалось загрузить результаты тестов:', error)
-    }
-    
-    // Загружаем оценки за задания
-    try {
-      const submissionsResponse = await apiClient.get(endpoints.lms.submittedAssignments)
-      if (submissionsResponse.success) {
-        const submissions = submissionsResponse.data.results || submissionsResponse.data || []
-        submissions.forEach(submission => {
-          if (submission.grade) {
-            allGrades.push({
-              id: `assignment-${submission.id}`,
-              subject_name: submission.assignment?.subject?.name || 'Задание',
-              grade: submission.grade,
-              related: submission.graded_at || submission.dateofsubmit,
-              feedback: submission.feedback || 'Задание оценено',
-              grader_name: submission.graded_by?.first_name + ' ' + submission.graded_by?.last_name || 'Преподаватель',
-              grade_type: 'assignment'
-            })
-          }
-        })
-      }
-    } catch (error) {
-      console.warn('Не удалось загрузить оценки за задания:', error)
-    }
-    
-    grades.value = allGrades
-    
+    const response = await lmsApi.getMyGrades()
+    grades.value = response.data || []
+    const names = [...new Set(grades.value.map(g => g.subject_name))]
+    names.forEach(n => { expandedCourses.value[n] = true })
   } catch (error) {
     console.error('Ошибка загрузки оценок:', error)
-    // При ошибке показываем пустой список
     grades.value = []
   } finally {
     loading.value = false
   }
 }
 
-// Определение цвета оценки
-function getGradeColor(grade) {
-  if (grade >= 90) return 'success'
-  if (grade >= 70) return 'warning'
-  if (grade >= 50) return 'info'
-  return 'danger'
-}
-
-// Определение типа оценки
-function getGradeTypeIcon(type) {
-  switch (type) {
-    case 'test': return FileCheck
-    case 'assignment': return BookOpen
-    default: return Award
-  }
-}
-
-function getGradeTypeName(type) {
-  switch (type) {
-    case 'test': return 'Тест'
-    case 'assignment': return 'Задание'
-    case 'manual': return 'Ручная оценка'
-    default: return 'Оценка'
-  }
-}
-
-// Экспорт оценок
-async function exportGrades() {
-  try {
-    const data = getFilteredGrades().map(grade => ({
-      'Курс': grade.subject_name,
-      'Оценка': grade.grade,
-      'Дата': new Date(grade.related).toLocaleDateString('ru'),
-      'Тип': getGradeTypeName(grade.grade_type),
-      'Преподаватель': grade.grader_name || 'Не указан',
-      'Комментарий': grade.feedback || 'Нет комментария'
-    }))
-    
-    const csv = convertToCSV(data)
-    downloadCSV(csv, 'my_grades.csv')
-  } catch (error) {
-    console.error('Ошибка экспорта:', error)
-  }
-}
-
-function convertToCSV(data) {
-  if (!data.length) return ''
-  
-  const headers = Object.keys(data[0])
-  const csvHeaders = headers.join(',')
-  const csvRows = data.map(row => 
-    headers.map(header => `"${row[header]}"`).join(',')
-  )
-  
-  return [csvHeaders, ...csvRows].join('\n')
-}
-
-function downloadCSV(csv, filename) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', filename)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
 onMounted(() => {
-  userRole.loadUserRoles().then(() => {
-    if (userRole.isStudent.value) {
-      loadGrades()
-    }
-  })
+  globalUserRole.loadUserRoles().then(() => loadGrades())
 })
 </script>
 
 <template>
-  <RoleGuard 
-    :required-roles="['student']" 
-    fallback-message="Раздел оценок доступен только студентам"
+  <RoleGuard
+    :roles="['student', 'admin', 'teacher']"
+    fallback-message="Раздел оценок доступен только студентам, преподавателям и администраторам"
   >
     <div class="grades-view">
-      <!-- Заголовок -->
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h3 class="mb-1">
-            <BarChart :size="28" class="me-2 text-primary" />
+          <h3 class="mb-1 d-flex align-items-center">
+            <BarChart :size="26" class="me-2 text-primary" style="vertical-align: middle" />
             Мои оценки
           </h3>
-          <p class="text-muted mb-0">Просмотр всех полученных оценок и статистики</p>
+          <p class="text-muted mb-0 small">Просмотр оценок и статистики по курсам</p>
         </div>
-        <button 
-          @click="exportGrades" 
-          class="btn btn-outline-primary"
-          :disabled="loading || getFilteredGrades().length === 0"
+        <button
+          class="btn btn-outline-primary btn-sm"
+          :disabled="loading || filteredGrades.length === 0"
+          @click="exportGrades"
         >
-          <Download :size="16" class="me-2" />
-          Экспорт
+          <Download :size="15" class="me-1" style="vertical-align: middle" />
+          Экспорт CSV
         </button>
       </div>
 
-      <!-- Загрузка -->
       <div v-if="loading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">Загрузка...</span>
@@ -262,196 +259,152 @@ onMounted(() => {
         <p class="mt-3 text-muted">Загрузка оценок...</p>
       </div>
 
-      <template v-else>
-        <!-- Статистика -->
-        <div class="row mb-4">
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card h-100">
-              <div class="card-body text-center">
-                <div class="stats-icon bg-primary-subtle text-primary mb-3">
-                  <TrendingUp :size="24" />
+      <template v-else-if="grades.length > 0">
+        <!-- Stat Cards -->
+        <div class="row mb-4 g-3">
+          <div v-for="item in statItems" :key="item.key" class="col-xl-3 col-sm-6">
+            <div class="card stat-card border-0 shadow-sm h-100">
+              <div class="card-body d-flex align-items-center gap-3 py-3">
+                <div :class="`stat-icon-wrapper bg-${item.color}-subtle text-${item.color}`">
+                  <component :is="item.icon" :size="20" />
                 </div>
-                <h4 class="mb-1">{{ gradesStats.average.toFixed(1) }}</h4>
-                <p class="text-muted mb-0">Средний балл</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card h-100">
-              <div class="card-body text-center">
-                <div class="stats-icon bg-success-subtle text-success mb-3">
-                  <Award :size="24" />
+                <div>
+                  <div class="stat-label text-muted mb-1">{{ item.label }}</div>
+                  <div class="stat-value">{{ stats[item.key] }}</div>
                 </div>
-                <h4 class="mb-1">{{ gradesStats.excellent }}</h4>
-                <p class="text-muted mb-0">Отличных оценок</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card h-100">
-              <div class="card-body text-center">
-                <div class="stats-icon bg-warning-subtle text-warning mb-3">
-                  <BookOpen :size="24" />
-                </div>
-                <h4 class="mb-1">{{ gradesStats.total }}</h4>
-                <p class="text-muted mb-0">Всего оценок</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card h-100">
-              <div class="card-body text-center">
-                <div class="stats-icon bg-info-subtle text-info mb-3">
-                  <FileCheck :size="24" />
-                </div>
-                <h4 class="mb-1">{{ courseOptions.length }}</h4>
-                <p class="text-muted mb-0">Курсов</p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Фильтры -->
-        <div class="card mb-4">
-          <div class="card-body">
-            <div class="row align-items-center">
-              <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                <label class="form-label mb-1">
-                  <Filter :size="16" class="me-1" />
-                  Курс
-                </label>
-                <select v-model="selectedCourse" class="form-select">
-                  <option :value="null">Все курсы</option>
-                  <option 
-                    v-for="course in courseOptions" 
-                    :key="course.value"
-                    :value="course.value"
-                  >
-                    {{ course.label }}
-                  </option>
-                </select>
+        <!-- Charts -->
+        <div class="row mb-4 g-3">
+          <div class="col-lg-5">
+            <div class="card chart-container shadow-sm h-100">
+              <div class="card-body">
+                <h6 class="mb-3 fw-semibold">Распределение оценок</h6>
+                <VueApexCharts type="donut" :options="donutOptions" :series="donutSeries" height="260" />
               </div>
-              
-              <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                <label class="form-label mb-1">
-                  <Calendar :size="16" class="me-1" />
-                  Период
-                </label>
-                <select v-model="selectedPeriod" class="form-select">
-                  <option value="all">Все время</option>
-                  <option value="week">Последняя неделя</option>
-                  <option value="month">Последний месяц</option>
-                  <option value="semester">Текущий семестр</option>
-                </select>
+            </div>
+          </div>
+          <div class="col-lg-7">
+            <div class="card chart-container shadow-sm h-100">
+              <div class="card-body">
+                <h6 class="mb-3 fw-semibold">Динамика среднего балла</h6>
+                <VueApexCharts type="area" :options="trendOptions" :series="trendSeries" height="260" />
               </div>
-              
-              <div class="col-lg-6 col-md-12">
-                <div class="d-flex align-items-center justify-content-end">
-                  <span class="text-muted">
-                    Найдено оценок: <strong>{{ getFilteredGrades().length }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs + Search -->
+        <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3 border-bottom">
+          <ul class="nav filter-tabs mb-0">
+            <li v-for="tab in tabs" :key="tab.key" class="nav-item">
+              <button
+                class="nav-link"
+                :class="{ active: activeTab === tab.key }"
+                @click="activeTab = tab.key"
+              >
+                {{ tab.label }}
+                <span class="badge bg-secondary-subtle text-secondary ms-1">{{ tabCount(tab.key) }}</span>
+              </button>
+            </li>
+          </ul>
+          <div class="input-group input-group-sm search-input mb-2">
+            <span class="input-group-text border-end-0"><Search :size="14" /></span>
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="form-control border-start-0"
+              placeholder="Поиск по названию..."
+            />
+          </div>
+        </div>
+
+        <!-- Grouped by course -->
+        <div v-if="groupedByCourse.length > 0" class="grade-accordion">
+          <div
+            v-for="group in groupedByCourse"
+            :key="group.name"
+            class="accordion-item"
+          >
+            <button
+              class="accordion-button"
+              :class="{ collapsed: !isCourseExpanded(group.name) }"
+              @click="toggleCourse(group.name)"
+            >
+              <div class="d-flex align-items-center justify-content-between w-100 me-2">
+                <div class="d-flex align-items-center gap-2">
+                  <GraduationCap :size="18" class="text-muted" style="vertical-align: middle" />
+                  <span>{{ group.name }}</span>
+                  <span class="text-muted small">({{ group.count }})</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress" style="width: 80px; height: 6px">
+                    <div
+                      class="progress-bar"
+                      :class="`bg-${getGradeColor(group.average)}`"
+                      :style="{ width: group.average + '%' }"
+                    ></div>
+                  </div>
+                  <span :class="`course-avg-badge bg-${getGradeColor(group.average)}-subtle text-${getGradeColor(group.average)}`">
+                    {{ group.average.toFixed(1) }}
                   </span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Список оценок -->
-        <div v-if="getFilteredGrades().length === 0" class="text-center py-5">
-          <Award :size="48" class="text-muted mb-3" />
-          <h5 class="text-muted">Оценки не найдены</h5>
-          <p class="text-muted">Попробуйте изменить фильтры или дождитесь новых оценок от преподавателей</p>
-        </div>
-
-        <div v-else class="row">
-          <div 
-            v-for="grade in getFilteredGrades()" 
-            :key="grade.id" 
-            class="col-lg-6 mb-4"
-          >
-            <div class="card grade-card h-100">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                  <div class="flex-grow-1">
-                    <div class="d-flex align-items-center mb-2">
-                      <component 
-                        :is="getGradeTypeIcon(grade.grade_type)" 
-                        :size="18" 
-                        class="me-2 text-muted"
-                      />
-                      <span class="badge bg-light text-dark">
-                        {{ getGradeTypeName(grade.grade_type) }}
-                      </span>
-                    </div>
-                    <h6 class="mb-1">{{ grade.subject_name }}</h6>
-                    <small class="text-muted">
-                      {{ new Date(grade.related).toLocaleDateString('ru', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      }) }}
-                    </small>
-                  </div>
-                  <div class="text-end">
-                    <span 
-                      :class="`badge bg-${getGradeColor(grade.grade)} fs-6 px-3 py-2`"
-                    >
-                      {{ grade.grade }}
+            </button>
+            <div v-show="isCourseExpanded(group.name)" class="accordion-body">
+              <div
+                v-for="g in group.items"
+                :key="g.id"
+                class="grade-item"
+              >
+                <div :class="`grade-score ${getGradeBg(g.grade)}`">
+                  {{ g.grade }}
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <span class="fw-semibold text-truncate" style="max-width: 300px">
+                      {{ g.assignment_name || 'Оценка' }}
+                    </span>
+                    <span :class="`grade-type-badge ${getTypeBadgeClass(g.grade_type)}`">
+                      <component :is="getTypeIcon(g.grade_type)" :size="11" class="me-1" style="vertical-align: middle" />
+                      {{ getTypeName(g.grade_type) }}
                     </span>
                   </div>
-                </div>
-                
-                <div v-if="grade.feedback" class="mb-2">
-                  <small class="text-muted d-block mb-1">Комментарий:</small>
-                  <p class="small mb-0 p-2 bg-light rounded">{{ grade.feedback }}</p>
-                </div>
-                
-                <div v-if="grade.grader_name" class="text-end">
-                  <small class="text-muted">Преподаватель: {{ grade.grader_name }}</small>
+                  <div class="d-flex align-items-center gap-3 text-muted small">
+                    <span>{{ formatDate(g.related) }}</span>
+                    <span v-if="g.grader_name">{{ g.grader_name }}</span>
+                  </div>
+                  <div v-if="g.feedback" class="grade-feedback">
+                    <MessageSquare :size="12" class="me-1" style="vertical-align: middle" />
+                    {{ g.feedback }}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Empty filtered -->
+        <div v-else class="empty-state text-center">
+          <div class="empty-icon bg-light">
+            <Search :size="32" class="text-muted" />
+          </div>
+          <h6 class="text-muted">Оценки не найдены</h6>
+          <p class="text-muted small">Попробуйте изменить фильтры или поисковый запрос</p>
+        </div>
       </template>
+
+      <!-- No grades at all -->
+      <div v-else class="empty-state text-center">
+        <div class="empty-icon bg-primary-subtle">
+          <Award :size="36" class="text-primary" />
+        </div>
+        <h5 class="text-muted">Оценок пока нет</h5>
+        <p class="text-muted">Оценки появятся после проверки ваших работ и тестов преподавателями</p>
+      </div>
     </div>
   </RoleGuard>
 </template>
-
-<style lang="scss" scoped>
-.grades-view {
-  .stats-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: none;
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-  }
-  
-  .stats-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-  }
-  
-  .grade-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: none;
-    border-left: 4px solid var(--bs-primary);
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-  }
-}
-</style>

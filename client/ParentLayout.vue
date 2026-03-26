@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { GraduationCap, BookOpen, FileCheck, Award, Calendar, ChartBar, Settings, User, Library } from 'lucide-vue-next'
+import { GraduationCap, BookOpen, FileCheck, Award, Calendar, ChartBar, Settings, User, Library, Brain, Map, Briefcase, Search, Route, GitCompare, CalendarDays, Activity, BarChart3, FileText, Users, Link } from 'lucide-vue-next'
 
 import NavigationButtons from '@/components/NavigationButtons.vue'
 import RoleSwitcher from './components/RoleSwitcher.vue'
@@ -17,21 +17,38 @@ const navigationButtons = computed(() => {
     return []
   }
 
-  const baseButtons = [
-    { icon: ChartBar, title: 'Панель пользователя', link: 'LMSDashboard', roles: ['student', 'teacher', 'admin', 'guest'] },
-    { icon: GraduationCap, title: 'Каталог курсов', link: 'LMSCatalog', roles: ['student', 'teacher', 'admin', 'guest'] },
+  const allButtons = [
+    // Общие
+    { icon: ChartBar, title: 'Панель пользователя', link: 'LMSDashboard', roles: ['student', 'teacher', 'admin', 'applicant'] },
+    { icon: GraduationCap, title: 'Каталог курсов', link: 'LMSCatalog', roles: ['student', 'teacher', 'admin', 'applicant'] },
+    { icon: BookOpen, title: 'Мои курсы', link: 'LMSCourses', roles: ['student', 'teacher', 'admin'] },
+    { icon: Calendar, title: 'Календарь', link: 'LMSCalendar', roles: ['student', 'teacher', 'admin'] },
+    { icon: FileCheck, title: 'Оценки', link: 'LMSGrades', roles: ['student', 'teacher', 'admin'] },
+    { icon: Award, title: 'Достижения', link: 'LMSBadges', roles: ['student', 'teacher', 'admin'] },
+    { icon: Settings, title: 'Управление курсами', link: 'LMSLessonsManagement', roles: ['teacher', 'admin'] },
+    { icon: Settings, title: 'Структура курсов', link: 'LMSCategoriesAndFormats', roles: ['teacher', 'admin'] },
 
-    { icon: BookOpen, title: 'Мои курсы', link: 'LMSCourses', roles: ['student', 'teacher', 'admin', 'guest'] },
-    { icon: Calendar, title: 'Календарь', link: 'LMSCalendar', roles: ['student', 'teacher', 'admin', 'guest'] },
+    // Абитуриент
+    { icon: User, title: 'Мой профиль', link: 'LMSApplicantProfile', roles: ['applicant'] },
+    { icon: Brain, title: 'Диагностика', link: 'LMSDiagnostics', roles: ['applicant'] },
+    { icon: Map, title: 'Карта маршрута', link: 'LMSEducationalRoute', roles: ['applicant'] },
+    { icon: Briefcase, title: 'Проф. развитие', link: 'LMSProfessionalDev', roles: ['applicant'] },
+    { icon: Search, title: 'Профессии', link: 'LMSProfessions', roles: ['applicant'] },
+    { icon: Route, title: 'Траектория', link: 'LMSTrajectory', roles: ['applicant'] },
 
-    { icon: FileCheck, title: 'Оценки', link: 'LMSGrades', roles: ['student', 'teacher', 'admin', 'guest'] },
-    { icon: Award, title: 'Достижения', link: 'LMSBadges', roles: ['student', 'teacher', 'admin', 'guest'] },
+    // Специалист по профориентации
+    { icon: GitCompare, title: 'Анализ разрывов', link: 'LMSGapAnalysis', roles: ['counselor'] },
+    { icon: CalendarDays, title: 'Календарь мероприятий', link: 'LMSCareerCalendar', roles: ['counselor', 'organizer'] },
+    { icon: Activity, title: 'Мониторинг', link: 'LMSMonitoring', roles: ['counselor'] },
 
-    { icon: Settings, title: 'Управление курсами', link: 'LMSLessonsManagement', roles: ['student', 'teacher', 'admin', 'guest'] },
-    { icon: Settings, title: 'Структура курсов', link: 'LMSCategoriesAndFormats', roles: ['student', 'teacher', 'admin', 'guest'] }
+    // Аналитик
+    { icon: BarChart3, title: 'Аналитика', link: 'LMSCareerAnalytics', roles: ['analyst'] },
+    { icon: FileText, title: 'Отчеты', link: 'LMSReports', roles: ['analyst'] },
+
+    // Администратор
+    { icon: Users, title: 'Обучающиеся', link: 'LMSStudentManagement', roles: ['admin'] },
+    { icon: Link, title: 'Интеграции', link: 'LMSIntegrations', roles: ['admin'] }
   ]
-
-  let allButtons = [...baseButtons]
 
   return allButtons.filter(button => 
     button.roles.includes(userRole.primaryRole.value)

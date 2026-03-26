@@ -24,6 +24,22 @@ export function useUserRole() {
     return Array.isArray(userRoles.value) && userRoles.value.some(role => role.role === 'moderator' && role.is_active)
   })
 
+  const isApplicant = computed(() => {
+    return Array.isArray(userRoles.value) && userRoles.value.some(role => role.role === 'applicant' && role.is_active)
+  })
+
+  const isCounselor = computed(() => {
+    return Array.isArray(userRoles.value) && userRoles.value.some(role => role.role === 'counselor' && role.is_active)
+  })
+
+  const isOrganizer = computed(() => {
+    return Array.isArray(userRoles.value) && userRoles.value.some(role => role.role === 'organizer' && role.is_active)
+  })
+
+  const isAnalyst = computed(() => {
+    return Array.isArray(userRoles.value) && userRoles.value.some(role => role.role === 'analyst' && role.is_active)
+  })
+
   const primaryRole = computed(() => {
     if (!Array.isArray(userRoles.value)) return 'guest'
     const activeRoles = userRoles.value.filter(role => role.is_active)
@@ -54,23 +70,44 @@ export function useUserRole() {
       'teaching_tools': ['teacher', 'admin'],
       
       // Студенческие функции
-      'enroll_course': ['student', 'teacher', 'admin'],
-      'submit_assignment': ['student'],
-      'take_test': ['student'],
-      'view_own_grades': ['student'],
-      'student_dashboard': ['student', 'teacher', 'admin'],
+      'enroll_course': ['student', 'applicant', 'teacher', 'admin'],
+      'submit_assignment': ['student', 'applicant'],
+      'take_test': ['student', 'applicant'],
+      'view_own_grades': ['student', 'applicant'],
+      'student_dashboard': ['student', 'applicant', 'teacher', 'admin'],
       
       // Общие функции
-      'view_courses': ['student', 'teacher', 'admin', 'guest'],
-      'use_forums': ['student', 'teacher', 'admin'],
-      'view_calendar': ['student', 'teacher', 'admin'],
-      'view_badges': ['student', 'teacher', 'admin'],
-      'view_catalog': ['student', 'teacher', 'admin', 'guest'],
+      'view_courses': ['student', 'applicant', 'teacher', 'admin', 'guest'],
+      'use_forums': ['student', 'applicant', 'teacher', 'admin'],
+      'view_calendar': ['student', 'applicant', 'teacher', 'admin', 'counselor', 'organizer'],
+      'view_badges': ['student', 'applicant', 'teacher', 'admin'],
+      'view_catalog': ['student', 'applicant', 'teacher', 'admin', 'guest'],
       
       // Административные функции
       'manage_users': ['admin'],
       'system_settings': ['admin'],
-      'delete_courses': ['admin']
+      'delete_courses': ['admin'],
+
+      // Профориентация — абитуриент
+      'view_applicant_profile': ['applicant'],
+      'view_diagnostics': ['applicant'],
+      'view_educational_route': ['applicant'],
+      'view_professional_development': ['applicant'],
+      'view_professions': ['applicant'],
+      'view_trajectory': ['applicant'],
+
+      // Профориентация — специалист
+      'view_gap_analysis': ['counselor'],
+      'view_career_calendar': ['counselor', 'organizer'],
+      'view_monitoring': ['counselor'],
+
+      // Аналитика
+      'view_career_analytics': ['analyst'],
+      'view_reports': ['analyst'],
+
+      // Администратор
+      'manage_students': ['teacher', 'admin'],
+      'view_integrations': ['admin']
     }
 
     const allowedRoles = permissions[functionName] || []
@@ -84,7 +121,11 @@ export function useUserRole() {
       'teacher': 'Преподаватель',
       'admin': 'Администратор',
       'moderator': 'Модератор',
-      'guest': 'Гость'
+      'guest': 'Гость',
+      'applicant': 'Абитуриент',
+      'counselor': 'Специалист по профориентации',
+      'organizer': 'Организатор мероприятий',
+      'analyst': 'Аналитик'
     }
     return roleNames[role] || role
   }
@@ -96,7 +137,11 @@ export function useUserRole() {
       'teacher': 'success',
       'admin': 'danger',
       'moderator': 'warning',
-      'guest': 'secondary'
+      'guest': 'secondary',
+      'applicant': 'info',
+      'counselor': 'purple',
+      'organizer': 'warning',
+      'analyst': 'dark'
     }
     return roleColors[role] || 'secondary'
   }
@@ -129,38 +174,38 @@ export function useUserRole() {
     }
   }
 
-  // Получить меню в зависимости от роли
   const getRoleBasedMenu = () => {
     const role = primaryRole.value
-    
-    const baseMenu = [
-      { route: 'LMSDashboard', label: 'Дашборд', roles: ['student', 'teacher', 'admin'] },
-      { route: 'LMSCatalog', label: 'Каталог курсов', roles: ['student', 'teacher', 'admin', 'guest'] },
+
+    const menu = [
+      { route: 'LMSDashboard', label: 'Дашборд', roles: ['student', 'teacher', 'admin', 'applicant'] },
+      { route: 'LMSCatalog', label: 'Каталог курсов', roles: ['student', 'teacher', 'admin', 'applicant', 'guest'] },
       { route: 'LMSForums', label: 'Форумы', roles: ['student', 'teacher', 'admin'] },
       { route: 'LMSCalendar', label: 'Календарь', roles: ['student', 'teacher', 'admin'] },
-      { route: 'LMSBadges', label: 'Достижения', roles: ['student', 'teacher', 'admin'] }
-    ]
-
-    const studentMenu = [
-      { route: 'LMSCourses', label: 'Мои курсы', roles: ['student'] },
+      { route: 'LMSBadges', label: 'Достижения', roles: ['student', 'teacher', 'admin'] },
+      { route: 'LMSCourses', label: 'Мои курсы', roles: ['student', 'teacher', 'admin'] },
       { route: 'LMSAssignments', label: 'Задания', roles: ['student'] },
       { route: 'LMSTests', label: 'Тесты', roles: ['student'] },
-      { route: 'LMSGrades', label: 'Оценки', roles: ['student'] }
-    ]
+      { route: 'LMSGrades', label: 'Оценки', roles: ['student', 'admin', 'teacher'] },
+      { route: 'LMSTeaching', label: 'Преподавание', roles: ['teacher', 'admin'] },
 
-    const teacherMenu = [
-      { route: 'LMSTeaching', label: 'Преподавание', roles: ['teacher', 'admin'] }
-    ]
+      { route: 'LMSApplicantProfile', label: 'Мой профиль', roles: ['applicant'] },
+      { route: 'LMSDiagnostics', label: 'Диагностика', roles: ['applicant'] },
+      { route: 'LMSEducationalRoute', label: 'Карта маршрута', roles: ['applicant'] },
+      { route: 'LMSProfessionalDev', label: 'Проф. развитие', roles: ['applicant'] },
+      { route: 'LMSProfessions', label: 'Профессии', roles: ['applicant'] },
+      { route: 'LMSTrajectory', label: 'Траектория', roles: ['applicant'] },
 
-    let menu = [...baseMenu]
-    
-    if (isStudent.value) {
-      menu.push(...studentMenu)
-    }
-    
-    if (isTeacher.value || isAdmin.value) {
-      menu.push(...teacherMenu)
-    }
+      { route: 'LMSGapAnalysis', label: 'Анализ разрывов', roles: ['counselor'] },
+      { route: 'LMSCareerCalendar', label: 'Календарь мероприятий', roles: ['counselor', 'organizer'] },
+      { route: 'LMSMonitoring', label: 'Мониторинг', roles: ['counselor'] },
+
+      { route: 'LMSCareerAnalytics', label: 'Аналитика', roles: ['analyst'] },
+      { route: 'LMSReports', label: 'Отчеты', roles: ['analyst'] },
+
+      { route: 'LMSStudentManagement', label: 'Обучающиеся', roles: ['admin'] },
+      { route: 'LMSIntegrations', label: 'Интеграции', roles: ['admin'] }
+    ]
 
     return menu.filter(item => item.roles.includes(role))
   }
@@ -177,6 +222,10 @@ export function useUserRole() {
     isStudent,
     isAdmin,
     isModerator,
+    isApplicant,
+    isCounselor,
+    isOrganizer,
+    isAnalyst,
     primaryRole,
     
     // Методы

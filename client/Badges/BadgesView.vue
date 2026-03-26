@@ -1,259 +1,160 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Award, Star, Lock, CheckCircle, Filter, Users, Target, TrendingUp } from 'lucide-vue-next'
-import { apiClient } from '@/js/api/manager'
-import { endpoints } from '@/js/api/endpoints'
+import {
+  Award, CheckCircle, Target, TrendingUp, Zap, Search, Lock,
+  BookOpen, GraduationCap, Library, Flame, Timer, Star,
+  Sparkles, MessageSquare, Heart, Users, Crown
+} from 'lucide-vue-next'
+import VueApexCharts from 'vue3-apexcharts'
+import { lmsApi } from '../js/lmsApi'
 import { globalUserRole } from '../composables/useUserRole'
+import './badges.scss'
 
-const badges = ref([])
-const userBadges = ref([])
+const allBadges = ref([])
+const earnedBadges = ref([])
 const loading = ref(true)
-const selectedCategory = ref('all')
-const userRole = globalUserRole
+const activeTab = ref('all')
+const searchQuery = ref('')
 
-// Статистика достижений
-const badgeStats = computed(() => {
-  const earned = userBadges.value.length
-  const total = badges.value.length
-  const progressPercentage = total > 0 ? (earned / total) * 100 : 0
-  
-  const categories = [...new Set(badges.value.map(b => b.category || 'Общие'))]
-  const earnedByCategory = categories.map(category => {
-    const categoryBadges = badges.value.filter(b => (b.category || 'Общие') === category)
-    const categoryEarned = categoryBadges.filter(b => isEarned(b.id)).length
-    return {
-      category,
-      earned: categoryEarned,
-      total: categoryBadges.length,
-      percentage: categoryBadges.length > 0 ? (categoryEarned / categoryBadges.length) * 100 : 0
-    }
-  })
-  
+const iconMap = {
+  BookOpen, GraduationCap, Library, Flame, Timer, Star,
+  Award, Sparkles, MessageSquare, Heart, Users, Zap, Target, Crown
+}
+
+const tierConfig = {
+  bronze: { label: 'Бронза', class: 'tier-bronze', badgeClass: 'bg-warning-subtle text-warning' },
+  silver: { label: 'Серебро', class: 'tier-silver', badgeClass: 'bg-secondary-subtle text-secondary' },
+  gold: { label: 'Золото', class: 'tier-gold', badgeClass: 'bg-warning text-dark' }
+}
+
+const categories = computed(() => [...new Set(allBadges.value.map(b => b.category))])
+
+const tabs = computed(() => [
+  { key: 'all', label: 'Все' },
+  ...categories.value.map(c => ({ key: c, label: c }))
+])
+
+const earnedIds = computed(() => new Set(earnedBadges.value.map(e => e.badge)))
+
+function isEarned(id) { return earnedIds.value.has(id) }
+
+function getEarnedDate(id) {
+  const e = earnedBadges.value.find(eb => eb.badge === id)
+  return e ? new Date(e.awarded_at).toLocaleDateString('ru', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+}
+
+const statItems = [
+  { key: 'earned', label: 'Получено', icon: CheckCircle, color: 'success' },
+  { key: 'available', label: 'Доступно', icon: Target, color: 'primary' },
+  { key: 'progress', label: 'Прогресс', icon: TrendingUp, color: 'warning' },
+  { key: 'xp', label: 'Очков XP', icon: Zap, color: 'info' }
+]
+
+const stats = computed(() => {
+  const earned = earnedBadges.value.length
+  const total = allBadges.value.length
+  const xp = allBadges.value
+    .filter(b => isEarned(b.id))
+    .reduce((s, b) => s + (b.xp || 0), 0)
   return {
     earned,
-    total,
-    progressPercentage,
-    earnedByCategory
+    available: total,
+    progress: total > 0 ? Math.round((earned / total) * 100) + '%' : '0%',
+    xp
   }
 })
 
-// Фильтрованные значки
+function tabCount(key) {
+  if (key === 'all') return allBadges.value.length
+  return allBadges.value.filter(b => b.category === key).length
+}
+
 const filteredBadges = computed(() => {
-  let filtered = badges.value
-  
-  if (selectedCategory.value !== 'all') {
-    filtered = filtered.filter(badge => (badge.category || 'Общие') === selectedCategory.value)
+  let result = allBadges.value
+  if (activeTab.value !== 'all') {
+    result = result.filter(b => b.category === activeTab.value)
   }
-  
-  // Сортируем: сначала полученные, потом по алфавиту
-  return filtered.sort((a, b) => {
-    const aEarned = isEarned(a.id)
-    const bEarned = isEarned(b.id)
-    
-    if (aEarned && !bEarned) return -1
-    if (!aEarned && bEarned) return 1
-    
-    return a.name.localeCompare(b.name)
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(b =>
+      b.name?.toLowerCase().includes(q) ||
+      b.description?.toLowerCase().includes(q)
+    )
+  }
+  return result.sort((a, b) => {
+    const ae = isEarned(a.id), be = isEarned(b.id)
+    if (ae !== be) return ae ? -1 : 1
+    const tierOrder = { gold: 0, silver: 1, bronze: 2 }
+    return (tierOrder[a.tier] ?? 3) - (tierOrder[b.tier] ?? 3)
   })
 })
 
-// Категории для фильтрации
-const categories = computed(() => {
-  const cats = [...new Set(badges.value.map(b => b.category || 'Общие'))]
-  return cats.sort()
+const recentEarned = computed(() => {
+  return [...earnedBadges.value]
+    .sort((a, b) => new Date(b.awarded_at) - new Date(a.awarded_at))
+    .slice(0, 3)
+    .map(e => {
+      const badge = allBadges.value.find(b => b.id === e.badge)
+      return badge ? { ...badge, awarded_at: e.awarded_at } : null
+    })
+    .filter(Boolean)
 })
 
-// Проверка получения значка
-function isEarned(badgeId) {
-  return userBadges.value.some(ub => ub.badge === badgeId)
+const donutOptions = computed(() => ({
+  chart: { type: 'donut', height: 240 },
+  labels: categories.value,
+  colors: ['#0d6efd', '#fd7e14', '#198754', '#0dcaf0', '#6f42c1'],
+  legend: { position: 'bottom', fontSize: '12px' },
+  plotOptions: { pie: { donut: { size: '55%' } } },
+  dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + '%' }
+}))
+
+const donutSeries = computed(() =>
+  categories.value.map(cat =>
+    allBadges.value.filter(b => b.category === cat && isEarned(b.id)).length
+  )
+)
+
+function getIcon(name) { return iconMap[name] || Award }
+
+function getTier(tier) { return tierConfig[tier] || tierConfig.bronze }
+
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString('ru', { day: 'numeric', month: 'short' })
 }
 
-// Получение информации о полученном значке
-function getEarnedInfo(badgeId) {
-  return userBadges.value.find(ub => ub.badge === badgeId)
-}
-
-// Загрузка данных
 async function loadBadges() {
   try {
     loading.value = true
-    
-    // Загружаем все доступные значки
-    const badgesResponse = await apiClient.get(endpoints.lms.badges)
-    if (badgesResponse.success) {
-      badges.value = badgesResponse.data.results || badgesResponse.data
-    }
-    
-    // Загружаем полученные пользователем значки
-    const userBadgesResponse = await apiClient.get(endpoints.lms.userBadges)
-    if (userBadgesResponse.success) {
-      userBadges.value = userBadgesResponse.data.results || userBadgesResponse.data
-    }
-    
-    // Если API не работает, показываем демо-данные
-    if (!badgesResponse.success) {
-      badges.value = [
-        {
-          id: 1,
-          name: 'Первый курс',
-          description: 'Записались на первый курс в системе обучения',
-          badge_type: 'course_completion',
-          category: 'Начинающий',
-          criteria: 'Записаться на любой курс',
-          is_active: true,
-          image: null
-        },
-        {
-          id: 2,
-          name: 'Отличник',
-          description: 'Получили 5 оценок "отлично" подряд',
-          badge_type: 'perfect_quiz',
-          category: 'Академические',
-          criteria: 'Получить 5 оценок 90+ баллов подряд',
-          is_active: true,
-          image: null
-        },
-        {
-          id: 3,
-          name: 'Активный участник',
-          description: 'Оставили 10 сообщений на форуме',
-          badge_type: 'active_participant',
-          category: 'Социальные',
-          criteria: 'Написать 10 сообщений на форуме',
-          is_active: true,
-          image: null
-        },
-        {
-          id: 4,
-          name: 'Быстрый старт',
-          description: 'Завершили первый урок за 24 часа после записи',
-          badge_type: 'early_bird',
-          category: 'Достижения',
-          criteria: 'Завершить урок в течение 24 часов',
-          is_active: true,
-          image: null
-        },
-        {
-          id: 5,
-          name: 'Помощник',
-          description: 'Помогли 5 студентам в форуме',
-          badge_type: 'helpful',
-          category: 'Социальные',
-          criteria: 'Получить 5 благодарностей на форуме',
-          is_active: true,
-          image: null
-        },
-        {
-          id: 6,
-          name: 'Марафонец',
-          description: 'Завершили 10 курсов',
-          badge_type: 'course_completion',
-          category: 'Академические',
-          criteria: 'Успешно завершить 10 курсов',
-          is_active: true,
-          image: null
-        }
-      ]
-      
-      userBadges.value = [
-        {
-          id: 1,
-          badge: 1,
-          awarded_at: '2024-01-05T10:00:00Z',
-          awarded_by: null
-        },
-        {
-          id: 2,
-          badge: 2,
-          awarded_at: '2024-01-10T15:30:00Z',
-          awarded_by: null
-        },
-        {
-          id: 3,
-          badge: 4,
-          awarded_at: '2024-01-06T09:15:00Z',
-          awarded_by: null
-        }
-      ]
-    }
-    
+    const response = await lmsApi.getMyBadges()
+    allBadges.value = response.badges || []
+    earnedBadges.value = response.earned || []
   } catch (error) {
-    console.error('Ошибка загрузки значков:', error)
-    // Показываем демо-данные при ошибке
-    badges.value = [
-      {
-        id: 1,
-        name: 'Первый курс',
-        description: 'Записались на первый курс',
-        badge_type: 'course_completion',
-        category: 'Начинающий',
-        criteria: 'Записаться на курс',
-        is_active: true
-      },
-      {
-        id: 2,
-        name: 'Отличник',
-        description: 'Получили отличные оценки',
-        badge_type: 'perfect_quiz',
-        category: 'Академические',
-        criteria: 'Получить 5 отличных оценок',
-        is_active: true
-      }
-    ]
-    
-    userBadges.value = [
-      { id: 1, badge: 1, awarded_at: '2024-01-05T10:00:00Z' }
-    ]
+    console.error('Ошибка загрузки достижений:', error)
+    allBadges.value = []
+    earnedBadges.value = []
   } finally {
     loading.value = false
   }
 }
 
-// Получение иконки для типа значка
-function getBadgeIcon(type) {
-  switch (type) {
-    case 'course_completion': return '🎓'
-    case 'perfect_quiz': return '⭐'
-    case 'active_participant': return '💬'
-    case 'early_bird': return '⚡'
-    case 'helpful': return '🤝'
-    default: return '🏆'
-  }
-}
-
-// Получение цвета категории
-function getCategoryColor(category) {
-  const colors = {
-    'Начинающий': 'primary',
-    'Академические': 'success',
-    'Социальные': 'info',
-    'Достижения': 'warning',
-    'Общие': 'secondary'
-  }
-  return colors[category] || 'secondary'
-}
-
 onMounted(() => {
-  userRole.loadUserRoles().then(() => {
-    loadBadges()
-  })
+  globalUserRole.loadUserRoles().then(() => loadBadges())
 })
 </script>
 
 <template>
   <div class="badges-view">
-    <!-- Заголовок -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <div>
-        <h3 class="mb-1">
-          <Award :size="28" class="me-2 text-primary" />
+        <h3 class="mb-1 d-flex align-items-center">
+          <Award :size="26" class="me-2 text-primary" style="vertical-align: middle" />
           Мои достижения
         </h3>
-        <p class="text-muted mb-0">Отслеживайте свой прогресс и получайте награды за успехи</p>
+        <p class="text-muted mb-0 small">Отслеживайте прогресс и получайте награды за успехи</p>
       </div>
     </div>
 
-    <!-- Загрузка -->
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Загрузка...</span>
@@ -261,277 +162,178 @@ onMounted(() => {
       <p class="mt-3 text-muted">Загрузка достижений...</p>
     </div>
 
-    <template v-else>
-      <!-- Общая статистика -->
-      <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card stats-card h-100">
-            <div class="card-body text-center">
-              <div class="stats-icon bg-success-subtle text-success mb-3">
-                <CheckCircle :size="24" />
+    <template v-else-if="allBadges.length > 0">
+      <!-- Stat Cards -->
+      <div class="row mb-4 g-3">
+        <div v-for="item in statItems" :key="item.key" class="col-xl-3 col-sm-6">
+          <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 py-3">
+              <div :class="`stat-icon-wrapper bg-${item.color}-subtle text-${item.color}`">
+                <component :is="item.icon" :size="20" />
               </div>
-              <h4 class="mb-1">{{ badgeStats.earned }}</h4>
-              <p class="text-muted mb-0">Получено</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card stats-card h-100">
-            <div class="card-body text-center">
-              <div class="stats-icon bg-primary-subtle text-primary mb-3">
-                <Target :size="24" />
-              </div>
-              <h4 class="mb-1">{{ badgeStats.total }}</h4>
-              <p class="text-muted mb-0">Всего доступно</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card stats-card h-100">
-            <div class="card-body text-center">
-              <div class="stats-icon bg-warning-subtle text-warning mb-3">
-                <TrendingUp :size="24" />
-              </div>
-              <h4 class="mb-1">{{ badgeStats.progressPercentage.toFixed(0) }}%</h4>
-              <p class="text-muted mb-0">Прогресс</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card stats-card h-100">
-            <div class="card-body text-center">
-              <div class="stats-icon bg-info-subtle text-info mb-3">
-                <Star :size="24" />
-              </div>
-              <h4 class="mb-1">{{ categories.length }}</h4>
-              <p class="text-muted mb-0">Категорий</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Прогресс по категориям -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h6 class="mb-0">Прогресс по категориям</h6>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div 
-              v-for="categoryData in badgeStats.earnedByCategory" 
-              :key="categoryData.category"
-              class="col-lg-6 mb-3"
-            >
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-medium">{{ categoryData.category }}</span>
-                <span class="text-muted">{{ categoryData.earned }}/{{ categoryData.total }}</span>
-              </div>
-              <div class="progress" style="height: 8px;">
-                <div 
-                  class="progress-bar"
-                  :class="`bg-${getCategoryColor(categoryData.category)}`"
-                  :style="`width: ${categoryData.percentage}%`"
-                ></div>
+              <div>
+                <div class="stat-label text-muted mb-1">{{ item.label }}</div>
+                <div class="stat-value">{{ stats[item.key] }}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Фильтры -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="row align-items-center">
-            <div class="col-lg-4 col-md-6 mb-3 mb-lg-0">
-              <label class="form-label mb-1">
-                <Filter :size="16" class="me-1" />
-                Категория
-              </label>
-              <select v-model="selectedCategory" class="form-select">
-                <option value="all">Все категории</option>
-                <option 
-                  v-for="category in categories" 
-                  :key="category"
-                  :value="category"
-                >
-                  {{ category }}
-                </option>
-              </select>
-            </div>
-            
-            <div class="col-lg-8 col-md-6">
-              <div class="d-flex align-items-center justify-content-end">
-                <span class="text-muted">
-                  Показано значков: <strong>{{ filteredBadges.length }}</strong>
-                </span>
-              </div>
+      <!-- Charts + Recent -->
+      <div class="row mb-4 g-3">
+        <div class="col-lg-5">
+          <div class="card chart-container shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="mb-3 fw-semibold">По категориям</h6>
+              <VueApexCharts type="donut" :options="donutOptions" :series="donutSeries" height="240" />
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Список значков -->
-      <div v-if="filteredBadges.length === 0" class="text-center py-5">
-        <Award :size="48" class="text-muted mb-3" />
-        <h5 class="text-muted">Значки не найдены</h5>
-        <p class="text-muted">Попробуйте изменить фильтры</p>
-      </div>
-
-      <div v-else class="row">
-        <div 
-          v-for="badge in filteredBadges" 
-          :key="badge.id" 
-          class="col-lg-4 col-md-6 mb-4"
-        >
-          <div 
-            class="card badge-card h-100" 
-            :class="{ 'earned': isEarned(badge.id) }"
-          >
-            <div class="card-body text-center">
-              <div class="badge-icon mb-3">
-                <span class="icon-emoji">{{ getBadgeIcon(badge.badge_type) }}</span>
-                <CheckCircle 
-                  v-if="isEarned(badge.id)" 
-                  :size="24" 
-                  class="earned-check" 
-                />
-                <Lock 
-                  v-else 
-                  :size="24" 
-                  class="locked-icon" 
-                />
-              </div>
-              
-              <h6 
-                class="badge-name" 
-                :class="{ 'text-muted': !isEarned(badge.id) }"
-              >
-                {{ badge.name }}
-              </h6>
-              
-              <p class="badge-description text-muted small">
-                {{ badge.description }}
-              </p>
-              
-              <div class="badge-category mb-3">
-                <span 
-                  :class="`badge bg-${getCategoryColor(badge.category || 'Общие')}-subtle text-${getCategoryColor(badge.category || 'Общие')}`"
-                >
-                  {{ badge.category || 'Общие' }}
-                </span>
-              </div>
-              
-              <div v-if="isEarned(badge.id)" class="earned-info">
-                <small class="text-success">
-                  <CheckCircle :size="14" class="me-1" />
-                  Получено {{ new Date(getEarnedInfo(badge.id).awarded_at).toLocaleDateString('ru') }}
-                </small>
-              </div>
-              
-              <div v-else class="locked-info">
-                <div class="mb-2">
-                  <small class="text-muted fw-medium">Как получить:</small>
-                  <div class="criteria-text small text-muted">
-                    {{ badge.criteria }}
+        <div class="col-lg-7">
+          <div class="card shadow-sm h-100" style="border-radius: 12px; border: none">
+            <div class="card-body">
+              <h6 class="mb-3 fw-semibold">Недавние достижения</h6>
+              <div v-if="recentEarned.length > 0">
+                <div v-for="badge in recentEarned" :key="badge.id" class="recent-achievement">
+                  <div :class="`recent-icon ${getTier(badge.tier).class}`">
+                    <component :is="getIcon(badge.icon)" :size="18" />
+                  </div>
+                  <div class="flex-grow-1">
+                    <div class="fw-semibold small">{{ badge.name }}</div>
+                    <div class="text-muted" style="font-size: 0.78rem">{{ badge.description }}</div>
+                  </div>
+                  <div class="text-end">
+                    <span class="text-muted small">{{ formatDate(badge.awarded_at) }}</span>
+                    <div>
+                      <span class="xp-badge bg-info-subtle text-info">+{{ badge.xp }} XP</span>
+                    </div>
                   </div>
                 </div>
-                <small class="text-muted">
-                  <Lock :size="14" class="me-1" />
-                  Заблокировано
-                </small>
+              </div>
+              <div v-else class="text-center text-muted py-4">
+                <Award :size="32" class="mb-2" />
+                <p class="small mb-0">Пока нет полученных достижений</p>
+              </div>
+
+              <!-- Category progress bars -->
+              <h6 class="mt-4 mb-3 fw-semibold">Прогресс по категориям</h6>
+              <div v-for="cat in categories" :key="cat" class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                  <span>{{ cat }}</span>
+                  <span class="text-muted">
+                    {{ allBadges.filter(b => b.category === cat && isEarned(b.id)).length }}/{{ allBadges.filter(b => b.category === cat).length }}
+                  </span>
+                </div>
+                <div class="progress" style="height: 5px">
+                  <div
+                    class="progress-bar bg-primary"
+                    :style="{ width: (allBadges.filter(b => b.category === cat).length > 0 ? (allBadges.filter(b => b.category === cat && isEarned(b.id)).length / allBadges.filter(b => b.category === cat).length * 100) : 0) + '%' }"
+                  ></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Tabs + Search -->
+      <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3 border-bottom">
+        <ul class="nav filter-tabs mb-0">
+          <li v-for="tab in tabs" :key="tab.key" class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: activeTab === tab.key }"
+              @click="activeTab = tab.key"
+            >
+              {{ tab.label }}
+              <span class="badge bg-secondary-subtle text-secondary ms-1">{{ tabCount(tab.key) }}</span>
+            </button>
+          </li>
+        </ul>
+        <div class="input-group input-group-sm search-input mb-2">
+          <span class="input-group-text border-end-0"><Search :size="14" /></span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="form-control border-start-0"
+            placeholder="Поиск по названию..."
+          />
+        </div>
+      </div>
+
+      <!-- Badge Cards Grid -->
+      <div v-if="filteredBadges.length > 0" class="row g-3">
+        <div v-for="badge in filteredBadges" :key="badge.id" class="col-xl-3 col-lg-4 col-sm-6">
+          <div class="card badge-card shadow-sm h-100" :class="{ earned: isEarned(badge.id), locked: !isEarned(badge.id) }">
+            <div class="card-body text-center py-4">
+              <!-- Icon circle -->
+              <div :class="`badge-icon-circle ${getTier(badge.tier).class} mb-3`">
+                <component :is="getIcon(badge.icon)" :size="28" />
+                <div v-if="isEarned(badge.id)" class="earned-check-overlay">
+                  <CheckCircle :size="14" />
+                </div>
+                <div v-else class="locked-overlay">
+                  <Lock :size="12" />
+                </div>
+              </div>
+
+              <!-- Name -->
+              <h6 class="fw-bold mb-1" :class="{ 'text-muted': !isEarned(badge.id) }">{{ badge.name }}</h6>
+              <p class="text-muted small mb-2" style="min-height: 2.4em">{{ badge.description }}</p>
+
+              <!-- Tier + XP -->
+              <div class="d-flex justify-content-center gap-2 mb-2">
+                <span :class="`tier-badge ${getTier(badge.tier).badgeClass}`">{{ getTier(badge.tier).label }}</span>
+                <span class="xp-badge bg-info-subtle text-info">+{{ badge.xp }} XP</span>
+              </div>
+
+              <!-- Progress bar (for unearned with progress) -->
+              <div v-if="!isEarned(badge.id) && badge.progress" class="badge-progress mb-2 px-2">
+                <div class="progress">
+                  <div
+                    class="progress-bar bg-primary"
+                    :style="{ width: (badge.progress.current / badge.progress.target * 100) + '%' }"
+                  ></div>
+                </div>
+                <div class="text-muted small mt-1">{{ badge.progress.current }} / {{ badge.progress.target }}</div>
+              </div>
+
+              <!-- Earned date -->
+              <div v-if="isEarned(badge.id)" class="mt-2">
+                <small class="text-success fw-medium">
+                  <CheckCircle :size="13" class="me-1" style="vertical-align: middle" />
+                  {{ getEarnedDate(badge.id) }}
+                </small>
+              </div>
+
+              <!-- Criteria for locked -->
+              <div v-else class="criteria-block mt-2 text-muted text-start">
+                <Target :size="12" class="me-1" style="vertical-align: middle" />
+                {{ badge.criteria }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty filtered -->
+      <div v-else class="empty-state text-center">
+        <div class="empty-icon bg-light">
+          <Search :size="32" class="text-muted" />
+        </div>
+        <h6 class="text-muted">Значки не найдены</h6>
+        <p class="text-muted small">Попробуйте изменить фильтры или поисковый запрос</p>
+      </div>
     </template>
+
+    <!-- No badges at all -->
+    <div v-else class="empty-state text-center">
+      <div class="empty-icon bg-primary-subtle">
+        <Award :size="36" class="text-primary" />
+      </div>
+      <h5 class="text-muted">Достижения пока недоступны</h5>
+      <p class="text-muted">Начните обучение, чтобы открыть систему достижений</p>
+    </div>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.badges-view {
-  .stats-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: none;
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-  }
-  
-  .stats-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-  }
-  
-  .badge-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 2px solid #e9ecef;
-    
-    &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    }
-    
-    &.earned {
-      border-color: var(--bs-success);
-      background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-    }
-  }
-  
-  .badge-icon {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .icon-emoji {
-    font-size: 3rem;
-    filter: grayscale(100%);
-    transition: filter 0.3s;
-  }
-  
-  .badge-card.earned .icon-emoji {
-    filter: grayscale(0%);
-  }
-  
-  .earned-check {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: white;
-    border-radius: 50%;
-    color: var(--bs-success);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .locked-icon {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: white;
-    border-radius: 50%;
-    color: var(--bs-secondary);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .badge-name {
-    font-weight: 600;
-  }
-  
-  .criteria-text {
-    background: #f8f9fa;
-    padding: 0.5rem;
-    border-radius: 4px;
-    margin-top: 0.25rem;
-  }
-}
-</style> 

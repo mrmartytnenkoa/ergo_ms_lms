@@ -1,437 +1,160 @@
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { Calendar, Clock, MapPin, Users, Plus, Filter, ChevronLeft, ChevronRight, AlertCircle, BookOpen } from 'lucide-vue-next'
-import { apiClient } from '@/js/api/manager'
-import { endpoints } from '@/js/api/endpoints'
-import { globalUserRole } from '../composables/useUserRole'
-
-const events = ref([])
-const loading = ref(true)
-const currentDate = ref(new Date())
-const selectedView = ref('month') // month, week, day
-const selectedEventType = ref('all')
-const userRole = globalUserRole
-
-// Типы событий
-const eventTypes = [
-  { value: 'all', label: 'Все события', color: 'secondary' },
-  { value: 'assignment', label: 'Задания', color: 'primary' },
-  { value: 'quiz', label: 'Тесты', color: 'info' },
-  { value: 'lesson', label: 'Уроки', color: 'success' },
-  { value: 'exam', label: 'Экзамены', color: 'danger' },
-  { value: 'deadline', label: 'Крайние сроки', color: 'warning' },
-  { value: 'other', label: 'Другие', color: 'secondary' }
-]
-
-// Фильтрованные события
-const filteredEvents = computed(() => {
-  let filtered = events.value
-  
-  if (selectedEventType.value !== 'all') {
-    filtered = filtered.filter(event => event.event_type === selectedEventType.value)
-  }
-  
-  // Фильтрация по текущему периоду просмотра
-  const today = new Date()
-  const currentYear = currentDate.value.getFullYear()
-  const currentMonth = currentDate.value.getMonth()
-  
-  if (selectedView.value === 'month') {
-    filtered = filtered.filter(event => {
-      const eventDate = new Date(event.start_date)
-      return eventDate.getFullYear() === currentYear && eventDate.getMonth() === currentMonth
-    })
-  } else if (selectedView.value === 'week') {
-    const weekStart = getWeekStart(currentDate.value)
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 6)
-    
-    filtered = filtered.filter(event => {
-      const eventDate = new Date(event.start_date)
-      return eventDate >= weekStart && eventDate <= weekEnd
-    })
-  } else if (selectedView.value === 'day') {
-    filtered = filtered.filter(event => {
-      const eventDate = new Date(event.start_date)
-      return eventDate.toDateString() === currentDate.value.toDateString()
-    })
-  }
-  
-  return filtered.sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
-})
-
-// События по дням для календарной сетки
-const eventsByDate = computed(() => {
-  const eventMap = {}
-  filteredEvents.value.forEach(event => {
-    const dateKey = new Date(event.start_date).toDateString()
-    if (!eventMap[dateKey]) {
-      eventMap[dateKey] = []
-    }
-    eventMap[dateKey].push(event)
-  })
-  return eventMap
-})
-
-// Загрузка событий
-async function loadEvents() {
-  try {
-    loading.value = true
-    
-    // Загружаем события календаря
-    const response = await apiClient.get(endpoints.lms.calendar)
-    let calendarEvents = []
-    
-    if (response.success) {
-      calendarEvents = response.data.results || response.data || []
-    }
-    
-    // Также загружаем предстоящие дедлайны заданий
-    try {
-      const assignmentsResponse = await apiClient.get(endpoints.lms.assignments)
-      if (assignmentsResponse.success) {
-        const assignments = assignmentsResponse.data.results || assignmentsResponse.data || []
-        
-        // Преобразуем задания в события календаря
-        assignments.forEach(assignment => {
-          if (assignment.deadline) {
-            calendarEvents.push({
-              id: `assignment-${assignment.id}`,
-              title: `Дедлайн: ${assignment.title}`,
-              description: assignment.description,
-              event_type: 'deadline',
-              start_date: assignment.deadline,
-              end_date: null,
-              location: '',
-              is_all_day: true,
-              subject: assignment.subject ? { name: assignment.subject.name } : { name: 'Общее' }
-            })
-          }
-        })
-      }
-    } catch (error) {
-      console.warn('Не удалось загрузить дедлайны заданий:', error)
-    }
-    
-    // Загружаем предстоящие тесты
-    try {
-      const testsResponse = await apiClient.get(endpoints.lms.tests)
-      if (testsResponse.success) {
-        const tests = testsResponse.data.results || testsResponse.data || []
-        
-        tests.forEach(test => {
-          if (test.available_until) {
-            calendarEvents.push({
-              id: `test-${test.id}`,
-              title: `Тест: ${test.name || test.title}`,
-              description: test.description,
-              event_type: 'quiz',
-              start_date: test.available_from || new Date().toISOString(),
-              end_date: test.available_until,
-              location: 'Онлайн',
-              is_all_day: false,
-              subject: test.subject ? { name: test.subject.name } : { name: 'Общее' }
-            })
-          }
-        })
-      }
-    } catch (error) {
-      console.warn('Не удалось загрузить информацию о тестах:', error)
-    }
-    
-    events.value = calendarEvents
-    
-  } catch (error) {
-    console.error('Ошибка загрузки событий:', error)
-    // При ошибке показываем пустой календарь
-    events.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-function getEventTypeInfo(type) {
-  return eventTypes.find(t => t.value === type) || eventTypes[0]
-}
-
-function formatEventTime(event) {
-  if (event.is_all_day) return 'Весь день'
-  
-  const startTime = new Date(event.start_date).toLocaleTimeString('ru', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  })
-  
-  if (event.end_date) {
-    const endTime = new Date(event.end_date).toLocaleTimeString('ru', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })
-    return `${startTime} - ${endTime}`
-  }
-  
-  return startTime
-}
-
-function getEventDuration(event) {
-  if (!event.end_date || event.is_all_day) return null
-  
-  const start = new Date(event.start_date)
-  const end = new Date(event.end_date)
-  const diffMs = end - start
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-  
-  if (diffHours > 0) {
-    return diffMinutes > 0 ? `${diffHours}ч ${diffMinutes}м` : `${diffHours}ч`
-  }
-  return `${diffMinutes}м`
-}
-
-function getWeekStart(date) {
-  const start = new Date(date)
-  const day = start.getDay()
-  const diff = start.getDate() - day + (day === 0 ? -6 : 1) // Понедельник как начало недели
-  start.setDate(diff)
-  return start
-}
-
-function navigateDate(direction) {
-  const newDate = new Date(currentDate.value)
-  
-  if (selectedView.value === 'month') {
-    newDate.setMonth(newDate.getMonth() + direction)
-  } else if (selectedView.value === 'week') {
-    newDate.setDate(newDate.getDate() + (direction * 7))
-  } else if (selectedView.value === 'day') {
-    newDate.setDate(newDate.getDate() + direction)
-  }
-  
-  currentDate.value = newDate
-}
-
-function goToToday() {
-  currentDate.value = new Date()
-}
-
-function getCurrentPeriodText() {
-  const date = currentDate.value
-  const options = { year: 'numeric', month: 'long' }
-  
-  if (selectedView.value === 'month') {
-    return date.toLocaleDateString('ru', options)
-  } else if (selectedView.value === 'week') {
-    const weekStart = getWeekStart(date)
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 6)
-    return `${weekStart.getDate()} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString('ru', { month: 'long', year: 'numeric' })}`
-  } else if (selectedView.value === 'day') {
-    return date.toLocaleDateString('ru', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  }
-  
-  return ''
-}
-
-function isEventToday(event) {
-  const today = new Date()
-  const eventDate = new Date(event.start_date)
-  return eventDate.toDateString() === today.toDateString()
-}
-
-function isEventOverdue(event) {
-  if (event.event_type !== 'deadline' && event.event_type !== 'assignment') return false
-  const now = new Date()
-  const eventDate = new Date(event.start_date)
-  return eventDate < now
-}
-
-onMounted(() => {
-  userRole.loadUserRoles().then(() => {
-    loadEvents()
-  })
-})
-</script>
-
 <template>
-  <div class="calendar-view">
-    <!-- Заголовок -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="calendar-view container-fluid px-4 py-3">
+    <div class="d-flex align-items-center justify-content-between mb-4">
       <div>
-        <h3 class="mb-1">
+        <h1 class="h3 mb-1 text-gray-800">
           <Calendar :size="28" class="me-2 text-primary" />
           Календарь событий
-        </h3>
+        </h1>
         <p class="text-muted mb-0">Отслеживайте важные события и сроки</p>
       </div>
     </div>
 
+    <!-- Stat-карточки -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3" v-for="stat in stats" :key="stat.label">
+        <div class="stat-card card border-0 shadow-sm h-100">
+          <div class="card-body d-flex align-items-center gap-3 py-3 px-3">
+            <div class="stat-icon-wrapper" :class="`bg-${stat.variant} bg-opacity-10`">
+              <component :is="stat.icon" :size="20" :class="`text-${stat.variant}`" />
+            </div>
+            <div>
+              <div class="stat-label text-muted">{{ stat.label }}</div>
+              <div class="stat-value">{{ stat.value }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter-tabs -->
+    <ul class="nav filter-tabs border-bottom mb-4">
+      <li class="nav-item" v-for="tab in eventTabs" :key="tab.value">
+        <button
+          class="nav-link"
+          :class="{ active: selectedEventType === tab.value }"
+          @click="selectedEventType = tab.value"
+        >
+          {{ tab.label }}
+          <span
+            v-if="tab.count > 0"
+            class="badge ms-1"
+            :class="`bg-${tab.color} bg-opacity-10 text-${tab.color}`"
+          >{{ tab.count }}</span>
+        </button>
+      </li>
+    </ul>
+
     <!-- Загрузка -->
     <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Загрузка...</span>
-      </div>
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div>
       <p class="mt-3 text-muted">Загрузка событий...</p>
     </div>
 
     <template v-else>
-      <!-- Навигация и фильтры -->
-      <div class="row mb-4">
+      <div class="row g-4">
+        <!-- Левая колонка: навигация + сетка + события дня -->
         <div class="col-lg-8">
-          <div class="card">
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between">
-                <!-- Навигация по периодам -->
-                <div class="d-flex align-items-center gap-2">
-                  <button 
-                    @click="navigateDate(-1)" 
-                    class="btn btn-outline-secondary btn-sm"
-                  >
-                    <ChevronLeft :size="16" />
-                  </button>
-                  
-                  <h5 class="mb-0 mx-3">{{ getCurrentPeriodText() }}</h5>
-                  
-                  <button 
-                    @click="navigateDate(1)" 
-                    class="btn btn-outline-secondary btn-sm"
-                  >
-                    <ChevronRight :size="16" />
-                  </button>
-                  
-                  <button 
-                    @click="goToToday" 
-                    class="btn btn-outline-primary btn-sm ms-3"
-                  >
-                    Сегодня
-                  </button>
-                </div>
-                
-                <!-- Выбор вида -->
-                <div class="btn-group" role="group">
-                  <input 
-                    type="radio" 
-                    class="btn-check" 
-                    id="view-month" 
-                    v-model="selectedView" 
-                    value="month"
-                  >
-                  <label class="btn btn-outline-primary btn-sm" for="view-month">Месяц</label>
-                  
-                  <input 
-                    type="radio" 
-                    class="btn-check" 
-                    id="view-week" 
-                    v-model="selectedView" 
-                    value="week"
-                  >
-                  <label class="btn btn-outline-primary btn-sm" for="view-week">Неделя</label>
-                  
-                  <input 
-                    type="radio" 
-                    class="btn-check" 
-                    id="view-day" 
-                    v-model="selectedView" 
-                    value="day"
-                  >
-                  <label class="btn btn-outline-primary btn-sm" for="view-day">День</label>
-                </div>
-              </div>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <button @click="navigateMonth(-1)" class="btn btn-outline-secondary btn-sm">
+                <ChevronLeft :size="16" />
+              </button>
+              <h5 class="mb-0 mx-2">{{ currentPeriodText }}</h5>
+              <button @click="navigateMonth(1)" class="btn btn-outline-secondary btn-sm">
+                <ChevronRight :size="16" />
+              </button>
+              <button @click="goToToday" class="btn btn-outline-primary btn-sm ms-2">Сегодня</button>
             </div>
           </div>
-        </div>
-        
-        <div class="col-lg-4">
-          <div class="card">
-            <div class="card-body">
-              <label class="form-label mb-2">
-                <Filter :size="16" class="me-1" />
-                Тип событий
-              </label>
-              <select v-model="selectedEventType" class="form-select">
-                <option 
-                  v-for="type in eventTypes" 
-                  :key="type.value" 
-                  :value="type.value"
-                >
-                  {{ type.label }}
-                </option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Список событий -->
-      <div v-if="filteredEvents.length === 0" class="text-center py-5">
-        <Calendar :size="48" class="text-muted mb-3" />
-        <h5 class="text-muted">События не найдены</h5>
-        <p class="text-muted">В выбранном периоде нет событий</p>
-      </div>
+          <CalendarGrid
+            :currentDate="currentDate"
+            :events="filteredEvents"
+            :selectedDate="selectedDate"
+            @select-date="onSelectDate"
+          />
 
-      <div v-else class="events-list">
-        <div 
-          v-for="event in filteredEvents" 
-          :key="event.id" 
-          class="card event-card mb-3"
-          :class="{
-            'border-danger': isEventOverdue(event),
-            'border-warning': isEventToday(event) && !isEventOverdue(event)
-          }"
-        >
-          <div class="card-body">
-            <div class="row align-items-center">
-              <div class="col-lg-8">
-                <div class="event-info">
-                  <div class="d-flex align-items-center gap-2 mb-2">
-                    <span 
-                      :class="`badge bg-${getEventTypeInfo(event.event_type).color}`"
-                    >
-                      {{ getEventTypeInfo(event.event_type).label }}
-                    </span>
-                    
-                    <AlertCircle 
-                      v-if="isEventOverdue(event)" 
-                      :size="16" 
-                      class="text-danger"
-                      title="Просрочено"
-                    />
-                    
-                    <h6 class="mb-0 flex-grow-1">{{ event.title }}</h6>
+          <!-- События выбранного дня -->
+          <div class="mt-4" v-if="selectedDayEvents.length > 0">
+            <h6 class="text-muted mb-3">
+              <Clock :size="16" class="me-1" />
+              {{ selectedDateText }}
+              <span class="badge bg-primary bg-opacity-10 text-primary ms-1">{{ selectedDayEvents.length }}</span>
+            </h6>
+            <div class="day-events-list">
+              <div
+                v-for="event in selectedDayEvents"
+                :key="event.id"
+                class="day-event-card"
+                :class="`border-${event.color || 'primary'}`"
+              >
+                <div class="d-flex align-items-start justify-content-between">
+                  <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                      <span class="badge" :class="`bg-${event.color || 'primary'}`">{{ getTypeLabel(event.event_type) }}</span>
+                      <strong>{{ event.title }}</strong>
+                    </div>
+                    <p class="text-muted small mb-1">{{ event.description }}</p>
+                    <div class="d-flex align-items-center gap-3">
+                      <small class="text-muted" v-if="event.subject">
+                        <BookOpen :size="12" class="me-1" />{{ event.subject.name }}
+                      </small>
+                      <small class="text-muted" v-if="event.location">
+                        <MapPin :size="12" class="me-1" />{{ event.location }}
+                      </small>
+                    </div>
                   </div>
-                  
-                  <p class="text-muted mb-2">{{ event.description }}</p>
-                  
-                  <div class="d-flex align-items-center gap-3">
-                    <small class="text-muted d-flex align-items-center">
-                      <BookOpen :size="14" class="me-1" />
-                      {{ event.subject?.name || 'Общее событие' }}
+                  <div class="text-end text-nowrap ms-3">
+                    <small class="text-muted d-block">
+                      <Clock :size="12" class="me-1" />{{ formatTime(event) }}
                     </small>
+                    <small v-if="getDuration(event)" class="text-muted">{{ getDuration(event) }}</small>
                   </div>
                 </div>
               </div>
-              
-              <div class="col-lg-4">
-                <div class="event-details">
-                  <div class="d-flex align-items-center mb-2">
-                    <Calendar :size="16" class="text-muted me-2" />
-                    <span>{{ new Date(event.start_date).toLocaleDateString('ru') }}</span>
-                  </div>
-                  
-                  <div class="d-flex align-items-center mb-2">
-                    <Clock :size="16" class="text-muted me-2" />
-                    <span>
-                      {{ formatEventTime(event) }}
-                      <span v-if="getEventDuration(event)" class="text-muted">
-                        ({{ getEventDuration(event) }})
-                      </span>
-                    </span>
-                  </div>
-                  
-                  <div v-if="event.location" class="d-flex align-items-center">
-                    <MapPin :size="16" class="text-muted me-2" />
-                    <span>{{ event.location }}</span>
-                  </div>
-                </div>
+            </div>
+          </div>
+
+          <div v-else-if="selectedDate" class="empty-state mt-4">
+            <Calendar :size="36" class="mb-2 opacity-50" />
+            <p class="mb-0">Нет событий на {{ selectedDateText }}</p>
+          </div>
+        </div>
+
+        <!-- Правая колонка: предстоящие события -->
+        <div class="col-lg-4">
+          <h6 class="text-muted mb-3">
+            <AlertCircle :size="16" class="me-1" />
+            Предстоящие события
+          </h6>
+
+          <div v-if="upcomingEvents.length === 0" class="empty-state">
+            <Calendar :size="32" class="mb-2 opacity-50" />
+            <p class="small mb-0">Нет предстоящих событий</p>
+          </div>
+
+          <div v-else>
+            <div
+              v-for="event in upcomingEvents"
+              :key="event.id"
+              class="upcoming-card"
+              :class="`upcoming-card--${event.color || 'primary'}`"
+              @click="onSelectDate(new Date(event.start_date))"
+              style="cursor: pointer;"
+            >
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge badge-sm" :class="`bg-${event.color || 'primary'}`" style="font-size: 0.65rem;">
+                  {{ getTypeLabel(event.event_type) }}
+                </span>
+                <small class="text-muted">{{ formatShortDate(event.start_date) }}</small>
+              </div>
+              <div class="fw-semibold small">{{ event.title }}</div>
+              <div class="d-flex align-items-center gap-2 mt-1">
+                <small v-if="event.subject" class="text-muted">{{ event.subject.name }}</small>
+                <small class="text-muted">
+                  <Clock :size="10" class="me-1" />{{ formatTime(event) }}
+                </small>
               </div>
             </div>
           </div>
@@ -441,41 +164,161 @@ onMounted(() => {
   </div>
 </template>
 
-<style lang="scss" scoped>
-.calendar-view {
-  .event-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: none;
-    border-left: 4px solid var(--bs-primary);
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { Calendar, Clock, MapPin, AlertCircle, BookOpen, ChevronLeft, ChevronRight, FileCheck } from 'lucide-vue-next'
+import { lmsApi } from '../js/lmsApi'
+import CalendarGrid from './CalendarGrid.vue'
+import './calendar.scss'
+
+const events = ref([])
+const loading = ref(true)
+const currentDate = ref(new Date())
+const selectedDate = ref(new Date())
+const selectedEventType = ref('all')
+
+const typeLabels = {
+  assignment: 'Задание', quiz: 'Тест', lesson: 'Урок', exam: 'Экзамен',
+  deadline: 'Дедлайн', webinar: 'Вебинар', meeting: 'Совещание', other: 'Другое'
+}
+
+const typeColors = {
+  assignment: 'primary', quiz: 'info', lesson: 'success', exam: 'danger',
+  deadline: 'warning', webinar: 'info', meeting: 'secondary', other: 'secondary'
+}
+
+function getTypeLabel(type) {
+  return typeLabels[type] || 'Событие'
+}
+
+const filteredEvents = computed(() => {
+  if (selectedEventType.value === 'all') return events.value
+  return events.value.filter(e => e.event_type === selectedEventType.value)
+})
+
+const eventTabs = computed(() => {
+  const all = events.value
+  const tabs = [{ value: 'all', label: 'Все', color: 'primary', count: all.length }]
+  const types = ['assignment', 'quiz', 'lesson', 'exam', 'deadline', 'webinar', 'meeting']
+  types.forEach(t => {
+    const count = all.filter(e => e.event_type === t).length
+    if (count > 0) {
+      tabs.push({ value: t, label: typeLabels[t], color: typeColors[t], count })
     }
-    
-    &.border-danger {
-      border-left-color: var(--bs-danger) !important;
-      background: rgba(var(--bs-danger-rgb), 0.02);
-    }
-    
-    &.border-warning {
-      border-left-color: var(--bs-warning) !important;
-      background: rgba(var(--bs-warning-rgb), 0.02);
-    }
-  }
-  
-  .btn-group .btn {
-    border-radius: 0;
-    
-    &:first-child {
-      border-top-left-radius: 0.375rem;
-      border-bottom-left-radius: 0.375rem;
-    }
-    
-    &:last-child {
-      border-top-right-radius: 0.375rem;
-      border-bottom-right-radius: 0.375rem;
-    }
+  })
+  return tabs
+})
+
+const stats = computed(() => {
+  const now = new Date()
+  const year = currentDate.value.getFullYear()
+  const month = currentDate.value.getMonth()
+  const monthEvents = events.value.filter(e => {
+    const d = new Date(e.start_date)
+    return d.getFullYear() === year && d.getMonth() === month
+  })
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const deadlines = events.value.filter(e =>
+    (e.event_type === 'deadline' || e.event_type === 'assignment') &&
+    new Date(e.start_date) >= now && new Date(e.start_date) <= weekFromNow
+  )
+  const tests = events.value.filter(e =>
+    (e.event_type === 'quiz' || e.event_type === 'exam') &&
+    new Date(e.start_date) >= now && new Date(e.start_date) <= weekFromNow
+  )
+  const subjects = new Set(events.value.filter(e => e.subject).map(e => e.subject.name))
+
+  return [
+    { label: 'Событий в месяце', value: monthEvents.length, icon: Calendar, variant: 'primary' },
+    { label: 'Дедлайнов (7 дн.)', value: deadlines.length, icon: AlertCircle, variant: 'danger' },
+    { label: 'Тестов (7 дн.)', value: tests.length, icon: FileCheck, variant: 'info' },
+    { label: 'Курсов', value: subjects.size, icon: BookOpen, variant: 'success' }
+  ]
+})
+
+const selectedDayEvents = computed(() => {
+  if (!selectedDate.value) return []
+  const key = toDateKey(selectedDate.value)
+  return filteredEvents.value
+    .filter(e => toDateKey(new Date(e.start_date)) === key)
+    .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+})
+
+const upcomingEvents = computed(() => {
+  const now = new Date()
+  return filteredEvents.value
+    .filter(e => new Date(e.start_date) >= now)
+    .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+    .slice(0, 8)
+})
+
+const currentPeriodText = computed(() => {
+  return currentDate.value.toLocaleDateString('ru', { year: 'numeric', month: 'long' })
+})
+
+const selectedDateText = computed(() => {
+  if (!selectedDate.value) return ''
+  return selectedDate.value.toLocaleDateString('ru', { weekday: 'long', day: 'numeric', month: 'long' })
+})
+
+function toDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function navigateMonth(dir) {
+  const d = new Date(currentDate.value)
+  d.setMonth(d.getMonth() + dir)
+  currentDate.value = d
+}
+
+function goToToday() {
+  currentDate.value = new Date()
+  selectedDate.value = new Date()
+}
+
+function onSelectDate(date) {
+  selectedDate.value = date
+  const y = date.getFullYear()
+  const m = date.getMonth()
+  if (y !== currentDate.value.getFullYear() || m !== currentDate.value.getMonth()) {
+    currentDate.value = new Date(y, m, 1)
   }
 }
-</style> 
+
+function formatTime(event) {
+  if (event.is_all_day) return 'Весь день'
+  const start = new Date(event.start_date).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })
+  if (event.end_date) {
+    const end = new Date(event.end_date).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })
+    return `${start} - ${end}`
+  }
+  return start
+}
+
+function getDuration(event) {
+  if (!event.end_date || event.is_all_day) return null
+  const ms = new Date(event.end_date) - new Date(event.start_date)
+  const h = Math.floor(ms / 3600000)
+  const m = Math.floor((ms % 3600000) / 60000)
+  if (h > 0) return m > 0 ? `${h}ч ${m}м` : `${h}ч`
+  return `${m}м`
+}
+
+function formatShortDate(isoDate) {
+  return new Date(isoDate).toLocaleDateString('ru', { day: 'numeric', month: 'short' })
+}
+
+async function fetchData() {
+  loading.value = true
+  try {
+    events.value = await lmsApi.getCalendarData()
+  } catch (e) {
+    console.error('Ошибка загрузки календаря:', e)
+    events.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchData)
+</script>

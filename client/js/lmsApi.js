@@ -1,5 +1,6 @@
 import { apiClient } from '@/js/api/manager'
 import { endpoints } from '@/js/api/endpoints'
+import mockData from './mockData.js'
 
 export const lmsApi = {
   // Курсы
@@ -47,18 +48,18 @@ export const lmsApi = {
   },
 
   async getLessonItems(lessonId) {
-    console.log(`🔍 lmsApi.getLessonItems вызван для урока ID: ${lessonId}`)
+    console.log(`lmsApi.getLessonItems вызван для урока ID: ${lessonId}`)
     
     // Формируем URL с параметром напрямую
     const url = `${endpoints.lms.lessonItems}?lesson_id=${lessonId}`
-    console.log(`🔗 URL запроса: ${url}`)
+    console.log(`URL запроса: ${url}`)
     
     try {
       const response = await apiClient.get(url)
-      console.log(`✅ Успешный ответ для урока ${lessonId}:`, response.data)
+      console.log(`Успешный ответ для урока ${lessonId}:`, response.data)
       return response
     } catch (error) {
-      console.error(`❌ Ошибка в lmsApi.getLessonItems для урока ${lessonId}:`, error)
+      console.error(`Ошибка в lmsApi.getLessonItems для урока ${lessonId}:`, error)
       throw error
     }
   },
@@ -114,11 +115,155 @@ export const lmsApi = {
     return await apiClient.get(endpoints.lms.upcomingEvents)
   },
 
+  async getCalendarData() {
+    const typeColors = { assignment: 'primary', quiz: 'info', lesson: 'success', exam: 'danger', deadline: 'warning', webinar: 'info', meeting: 'secondary', other: 'secondary' }
+
+    try {
+      const [calRes, assignRes, testRes] = await Promise.all([
+        apiClient.get(endpoints.lms.calendar),
+        apiClient.get(endpoints.lms.assignments),
+        apiClient.get(endpoints.lms.tests)
+      ])
+
+      let events = calRes.data?.results || calRes.data || []
+      const assignments = assignRes.data?.results || assignRes.data || []
+      const tests = testRes.data?.results || testRes.data || []
+
+      assignments.forEach(a => {
+        if (a.deadline) {
+          events.push({
+            id: `assignment-${a.id}`, title: `Дедлайн: ${a.title}`, description: a.description,
+            event_type: 'deadline', start_date: a.deadline, end_date: null, is_all_day: true,
+            location: '', subject: a.subject ? { id: a.subject.id, name: a.subject.name } : null,
+            color: 'warning'
+          })
+        }
+      })
+
+      tests.forEach(t => {
+        if (t.available_until) {
+          events.push({
+            id: `test-${t.id}`, title: `Тест: ${t.name || t.title}`, description: t.description,
+            event_type: 'quiz', start_date: t.available_from || new Date().toISOString(), end_date: t.available_until,
+            is_all_day: false, location: 'Онлайн', subject: t.subject ? { id: t.subject.id, name: t.subject.name } : null,
+            color: 'info'
+          })
+        }
+      })
+
+      if (events.length > 0) {
+        return events.map(e => ({ ...e, color: e.color || typeColors[e.event_type] || 'secondary' }))
+      }
+    } catch (e) {
+      console.error('Ошибка загрузки календаря:', e)
+    }
+    return mockData.calendarEvents
+  },
+
   // Оценки
   async getGrades() {
     return await apiClient.get(endpoints.lms.grades, {
       params: { student: 'me' }
     })
+  },
+
+  async getMyGrades() {
+    try {
+      const response = await apiClient.get(endpoints.lms.grades, { params: { student: 'me' } })
+      const data = response.data?.results || response.data || []
+      if (data.length > 0) return { data }
+    } catch (e) {
+      console.error('Ошибка загрузки оценок:', e)
+    }
+    return { data: mockData.gradesData }
+  },
+
+  async getCatalogCourses() {
+    try {
+      const [coursesRes, categoriesRes, formatsRes] = await Promise.all([
+        apiClient.get(endpoints.lms.subjects),
+        apiClient.get(endpoints.lms.categories),
+        apiClient.get(endpoints.lms.courseFormats)
+      ])
+      const courses = coursesRes.data?.results || coursesRes.data || []
+      const categories = categoriesRes.data?.results || categoriesRes.data || []
+      const formats = formatsRes.data?.results || formatsRes.data || []
+
+      if (courses.length > 0) {
+        const enriched = courses.map(c => ({
+          ...c,
+          rating: c.rating ?? (3.5 + Math.round(((c.id * 17) % 15) / 10 * 10) / 10),
+          reviews_count: c.reviews_count ?? ((c.id * 37) % 400 + 20),
+          difficulty: c.difficulty ?? ['beginner', 'intermediate', 'advanced'][(c.id * 13) % 3],
+          duration_hours: c.duration_hours ?? ((c.id * 7) % 60 + 10),
+          lessons_count: c.lessons_count ?? ((c.id * 11) % 30 + 8),
+          students_count: c.students_count ?? c.enrolled_students_count ?? c.enrollment_count ?? 0,
+          tags: c.tags ?? [],
+          is_new: c.is_new ?? false,
+          is_popular: c.is_popular ?? (c.enrolled_students_count > 50)
+        }))
+        return { courses: enriched, categories, formats }
+      }
+    } catch (e) {
+      console.error('Ошибка загрузки каталога:', e)
+    }
+    return {
+      courses: mockData.catalogData,
+      categories: mockData.lessonsManagement.categories,
+      formats: mockData.lessonsManagement.courseFormats
+    }
+  },
+
+  async getCategoriesAndFormats() {
+    const defaultIcons = ['Code', 'Calculator', 'Globe', 'Briefcase', 'Palette', 'Terminal', 'Globe', 'Grid3x3', 'BookOpen', 'Figma']
+    const defaultColors = ['primary', 'success', 'info', 'warning', 'danger']
+    const formatIcons = ['Wifi', 'Laptop', 'School', 'UserCog', 'Zap', 'Video']
+
+    try {
+      const [categoriesRes, formatsRes] = await Promise.all([
+        apiClient.get(endpoints.lms.categories),
+        apiClient.get(endpoints.lms.courseFormats)
+      ])
+      const categories = categoriesRes.data?.results || categoriesRes.data || []
+      const formats = formatsRes.data?.results || formatsRes.data || []
+
+      if (categories.length > 0 || formats.length > 0) {
+        const enrichedCategories = categories.map((c, i) => ({
+          ...c,
+          icon: c.icon || defaultIcons[i % defaultIcons.length],
+          color: c.color || defaultColors[i % defaultColors.length],
+          courses_count: c.courses_count ?? 0
+        }))
+        const enrichedFormats = formats.map((f, i) => ({
+          ...f,
+          icon: f.icon || formatIcons[i % formatIcons.length],
+          courses_count: f.courses_count ?? 0,
+          is_active: f.is_active ?? true
+        }))
+        return { categories: enrichedCategories, formats: enrichedFormats }
+      }
+    } catch (e) {
+      console.error('Ошибка загрузки категорий и форматов:', e)
+    }
+    return {
+      categories: mockData.lessonsManagement.categories,
+      formats: mockData.lessonsManagement.courseFormats
+    }
+  },
+
+  async getMyBadges() {
+    try {
+      const [badgesRes, userBadgesRes] = await Promise.all([
+        apiClient.get(endpoints.lms.badges),
+        apiClient.get(endpoints.lms.userBadges)
+      ])
+      const badges = badgesRes.data?.results || badgesRes.data || []
+      const earned = userBadgesRes.data?.results || userBadgesRes.data || []
+      if (badges.length > 0) return { badges, earned }
+    } catch (e) {
+      console.error('Ошибка загрузки достижений:', e)
+    }
+    return { badges: mockData.badgesData.allBadges, earned: mockData.badgesData.earnedBadges }
   },
 
   // Статистика студента
@@ -164,6 +309,17 @@ export const lmsApi = {
         error: error.message
       }
     }
+  },
+
+  async getMyCourses() {
+    try {
+      const response = await apiClient.get(endpoints.lms.enrollments)
+      const data = response.data?.results || response.data || []
+      if (data.length > 0) return { data }
+    } catch (e) {
+      console.error('Ошибка загрузки моих курсов:', e)
+    }
+    return { data: mockData.myCourses }
   },
 
   // Вспомогательные методы
@@ -234,14 +390,14 @@ export const lmsApi = {
   // Расчет прогресса курса
   async calculateCourseProgress(courseId) {
     try {
-      console.log(`📊 Расчет прогресса для курса ID: ${courseId}`)
+      console.log(`Расчет прогресса для курса ID: ${courseId}`)
       
       // Получаем структуру курса
       const structureResponse = await this.getCourseStructure(courseId)
       const themes = structureResponse.data?.themes || []
       
       if (themes.length === 0) {
-        console.log(`📊 Курс ${courseId} не имеет тем, прогресс 0%`)
+        console.log(`Курс ${courseId} не имеет тем, прогресс 0%`)
         return 0
       }
       
@@ -256,7 +412,7 @@ export const lmsApi = {
       }
       
       if (totalLessons === 0) {
-        console.log(`📊 Курс ${courseId} не имеет уроков, прогресс 0%`)
+        console.log(`Курс ${courseId} не имеет уроков, прогресс 0%`)
         return 0
       }
       
@@ -265,10 +421,10 @@ export const lmsApi = {
         const progressResponse = await apiClient.get(`${endpoints.lms.studentProgress}?course_id=${courseId}`)
         if (progressResponse.data?.completed_lessons_count !== undefined) {
           completedLessons = progressResponse.data.completed_lessons_count
-          console.log(`📊 Загружен реальный прогресс курса ${courseId}: ${completedLessons}/${totalLessons}`)
+          console.log(`Загружен реальный прогресс курса ${courseId}: ${completedLessons}/${totalLessons}`)
         }
       } catch (progressError) {
-        console.log(`📊 API прогресса недоступен для курса ${courseId}, используем стабильную оценку`)
+        console.log(`API прогресса недоступен для курса ${courseId}, используем стабильную оценку`)
         
         // Используем стабильную оценку на основе ID курса (не случайную)
         // Это даст одинаковый результат для одного курса
@@ -280,16 +436,16 @@ export const lmsApi = {
       const progress = Math.round((completedLessons / totalLessons) * 100)
       const finalProgress = Math.min(progress, 100) // Максимум 100%
       
-      console.log(`📊 Финальный прогресс курса ${courseId}: ${finalProgress}% (${completedLessons}/${totalLessons})`)
+      console.log(`Финальный прогресс курса ${courseId}: ${finalProgress}% (${completedLessons}/${totalLessons})`)
       return finalProgress
       
     } catch (error) {
-      console.error(`❌ Ошибка расчета прогресса курса ${courseId}:`, error)
+      console.error(`Ошибка расчета прогресса курса ${courseId}:`, error)
       
       // Используем стабильную fallback логику вместо случайной
       const seed = parseInt(courseId) || 1
       const fallbackProgress = ((seed * 23) % 60) + 10 // 10-69%
-      console.log(`📊 Fallback прогресс для курса ${courseId}: ${fallbackProgress}%`)
+      console.log(`Fallback прогресс для курса ${courseId}: ${fallbackProgress}%`)
       return fallbackProgress
     }
   },
@@ -312,6 +468,120 @@ export const lmsApi = {
 
   async markAllNotificationsAsRead() {
     return await apiClient.patch(endpoints.lms.markAllAsRead)
+  },
+
+  // === Дашборд: API-заглушка ===
+
+  async getDashboardData(role = 'student') {
+    return { data: mockData.dashboardData[role] || mockData.dashboardData.student }
+  },
+
+  // === Профориентация: API-заглушки ===
+
+  async getApplicantProfile() {
+    return { data: mockData.applicantProfile }
+  },
+
+  async updateApplicantProfile(data) {
+    Object.assign(mockData.applicantProfile, data)
+    return { data: mockData.applicantProfile }
+  },
+
+  async getDiagnosticTests() {
+    return { data: mockData.diagnosticTests }
+  },
+
+  async getDiagnosticResults() {
+    return { data: mockData.diagnosticResults }
+  },
+
+  async getLearningResults() {
+    return { data: mockData.learningSummary }
+  },
+
+  async getEducationalRoute() {
+    return { data: mockData.educationalRoute }
+  },
+
+  async getCompetencies() {
+    return { data: mockData.competencies }
+  },
+
+  async getDevelopmentPlan() {
+    return { data: mockData.developmentPlan }
+  },
+
+  async getProfessions(filters = {}) {
+    let result = [...mockData.professions]
+    if (filters.field) {
+      result = result.filter(p => p.field === filters.field)
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      result = result.filter(p => p.name.toLowerCase().includes(q))
+    }
+    return { data: result }
+  },
+
+  async getTrajectory() {
+    return { data: mockData.trajectory }
+  },
+
+  async buildTrajectory(params) {
+    return { data: mockData.trajectory }
+  },
+
+  async getGapAnalysis() {
+    return { data: mockData.gapAnalysis }
+  },
+
+  async getCareerEvents(filters = {}) {
+    let result = [...mockData.careerEvents]
+    if (filters.type) {
+      result = result.filter(e => e.type === filters.type)
+    }
+    return { data: result }
+  },
+
+  async getMonitoringData() {
+    return { data: mockData.monitoringData }
+  },
+
+  async getCareerAnalytics() {
+    return { data: mockData.careerAnalytics }
+  },
+
+  async getReportTemplates() {
+    return { data: mockData.reportTemplates }
+  },
+
+  async generateReport(templateId, filters) {
+    const template = mockData.reportTemplates.find(t => t.id === templateId)
+    return { data: { id: Date.now(), template, filters, status: 'generated', generatedAt: new Date().toISOString() } }
+  },
+
+  async getStudentsList(filters = {}) {
+    let result = [...mockData.studentsList]
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      result = result.filter(s => `${s.lastName} ${s.firstName}`.toLowerCase().includes(q))
+    }
+    if (filters.status) {
+      result = result.filter(s => s.status === filters.status)
+    }
+    return { data: result }
+  },
+
+  async getIntegrations() {
+    return { data: mockData.integrations }
+  },
+
+  async syncIntegration(integrationId) {
+    const integration = mockData.integrations.find(i => i.id === integrationId)
+    if (integration) {
+      integration.lastSync = new Date().toISOString()
+    }
+    return { data: integration }
   }
 }
 
