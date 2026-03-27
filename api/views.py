@@ -148,7 +148,7 @@ class CourseCategoryViewSet(SwaggerSafeMixin, BaseLMSViewSet):
         
         # Студенты видят только категории опубликованных курсов
         return CourseCategory.objects.filter(
-            subjects__is_published=True
+            subject__is_published=True
         ).distinct()
 
 class CourseFormatViewSet(SwaggerSafeMixin, BaseLMSViewSet):
@@ -219,7 +219,7 @@ class CourseFormatViewSet(SwaggerSafeMixin, BaseLMSViewSet):
         
         # Студенты видят только форматы опубликованных курсов
         return CourseFormat.objects.filter(
-            subjects__is_published=True
+            subject__is_published=True
         ).distinct()
 
 class SubjectViewSet(SwaggerSafeMixin, BaseLMSViewSet):

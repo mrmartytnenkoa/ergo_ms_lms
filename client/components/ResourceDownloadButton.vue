@@ -16,7 +16,6 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Download } from 'lucide-vue-next'
-import { downloadResource } from '@/core/cms/filemanager/js/resourceDownload'
 
 const props = defineProps({
   resource: {
@@ -95,15 +94,15 @@ const handleDownload = async () => {
   emit('downloadStart', props.resource)
   
   try {
-    const success = await downloadResource(
-      props.resource,
-      (resource) => {
-        emit('downloadSuccess', resource)
-      },
-      (errorMsg) => {
-        emit('downloadError', errorMsg, props.resource)
-      }
-    )
+    const resourceId = props.resource?.id
+    if (!resourceId) {
+      emit('downloadError', 'Не указан идентификатор ресурса', props.resource)
+      return
+    }
+    window.open(`/api/lms/resources/${resourceId}/download/`, '_blank')
+    emit('downloadSuccess', props.resource)
+  } catch (error) {
+    emit('downloadError', error?.message || 'Ошибка скачивания ресурса', props.resource)
   } finally {
     isDownloading.value = false
   }

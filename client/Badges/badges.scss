@@ -93,6 +93,47 @@
   }
 }
 
+.badge-management-card {
+  border-radius: 12px;
+
+  .form-label {
+    font-weight: 500;
+  }
+}
+
+.management-list {
+  max-height: 390px;
+  overflow: auto;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 10px;
+  padding: 0.35rem;
+  background: #fff;
+}
+
+.management-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--bs-light);
+  }
+}
+
+.manage-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .recent-achievement {
   display: flex;
   align-items: center;

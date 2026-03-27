@@ -129,7 +129,6 @@ import {
 } from 'lucide-vue-next'
 import { apiClient } from '@/js/api/manager'
 import { endpoints } from '@/js/api/endpoints'
-import { downloadResource as downloadResourceUtil } from '@/core/cms/filemanager/js/resourceDownload'
 import ResourceDownloadButton from '../../components/ResourceDownloadButton.vue'
 
 const props = defineProps({

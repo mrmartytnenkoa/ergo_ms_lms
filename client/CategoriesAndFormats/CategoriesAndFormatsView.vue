@@ -1,6 +1,6 @@
 <template>
   <div class="categories-formats-view container-fluid px-4 py-3">
-    <RoleGuard :allowedRoles="['admin', 'teacher']">
+    <RoleGuard :roles="['admin', 'teacher']">
       <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
           <h1 class="h3 mb-1 text-gray-800">Управление структурой курсов</h1>

@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import {
   Award, CheckCircle, Target, TrendingUp, Zap, Search, Lock,
   BookOpen, GraduationCap, Library, Flame, Timer, Star,
-  Sparkles, MessageSquare, Heart, Users, Crown
+  Sparkles, MessageSquare, Heart, Users, Crown, Plus, Pencil, Trash2, Save, X
 } from 'lucide-vue-next'
 import VueApexCharts from 'vue3-apexcharts'
 import { lmsApi } from '../js/lmsApi'
@@ -15,6 +15,25 @@ const earnedBadges = ref([])
 const loading = ref(true)
 const activeTab = ref('all')
 const searchQuery = ref('')
+const formMode = ref('create')
+const editingBadgeId = ref(null)
+const manageSearch = ref('')
+
+const defaultBadgeForm = () => ({
+  name: '',
+  description: '',
+  badge_type: '',
+  category: 'Обучение',
+  tier: 'bronze',
+  criteria: '',
+  icon: 'Award',
+  xp: 100,
+  is_active: true,
+  progress_current: null,
+  progress_target: null
+})
+
+const badgeForm = ref(defaultBadgeForm())
 
 const iconMap = {
   BookOpen, GraduationCap, Library, Flame, Timer, Star,
@@ -33,6 +52,23 @@ const tabs = computed(() => [
   { key: 'all', label: 'Все' },
   ...categories.value.map(c => ({ key: c, label: c }))
 ])
+
+const categoryOptions = computed(() => {
+  const base = ['Обучение', 'Регулярность', 'Академические', 'Социальные', 'Мастерство']
+  return [...new Set([...base, ...allBadges.value.map(b => b.category).filter(Boolean)])]
+})
+
+const iconOptions = Object.keys(iconMap)
+
+const managedBadges = computed(() => {
+  if (!manageSearch.value) return allBadges.value
+  const q = manageSearch.value.toLowerCase()
+  return allBadges.value.filter(b =>
+    b.name?.toLowerCase().includes(q) ||
+    b.category?.toLowerCase().includes(q) ||
+    b.badge_type?.toLowerCase().includes(q)
+  )
+})
 
 const earnedIds = computed(() => new Set(earnedBadges.value.map(e => e.badge)))
 
@@ -123,6 +159,72 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('ru', { day: 'numeric', month: 'short' })
 }
 
+function startCreateBadge() {
+  formMode.value = 'create'
+  editingBadgeId.value = null
+  badgeForm.value = defaultBadgeForm()
+}
+
+function startEditBadge(badge) {
+  formMode.value = 'edit'
+  editingBadgeId.value = badge.id
+  badgeForm.value = {
+    name: badge.name || '',
+    description: badge.description || '',
+    badge_type: badge.badge_type || '',
+    category: badge.category || 'Обучение',
+    tier: badge.tier || 'bronze',
+    criteria: badge.criteria || '',
+    icon: badge.icon || 'Award',
+    xp: Number(badge.xp ?? 0),
+    is_active: Boolean(badge.is_active),
+    progress_current: badge.progress?.current ?? null,
+    progress_target: badge.progress?.target ?? null
+  }
+}
+
+function upsertBadge() {
+  if (!badgeForm.value.name.trim()) return
+  if (!badgeForm.value.badge_type.trim()) return
+
+  const payload = {
+    name: badgeForm.value.name.trim(),
+    description: badgeForm.value.description.trim(),
+    badge_type: badgeForm.value.badge_type.trim(),
+    category: badgeForm.value.category,
+    tier: badgeForm.value.tier,
+    criteria: badgeForm.value.criteria.trim(),
+    icon: badgeForm.value.icon,
+    xp: Number(badgeForm.value.xp || 0),
+    is_active: Boolean(badgeForm.value.is_active)
+  }
+
+  const hasProgress = badgeForm.value.progress_current !== null && badgeForm.value.progress_target !== null
+  if (hasProgress && Number(badgeForm.value.progress_target) > 0) {
+    payload.progress = {
+      current: Number(badgeForm.value.progress_current),
+      target: Number(badgeForm.value.progress_target)
+    }
+  }
+
+  if (formMode.value === 'edit' && editingBadgeId.value !== null) {
+    allBadges.value = allBadges.value.map(b =>
+      b.id === editingBadgeId.value ? { ...b, ...payload } : b
+    )
+  } else {
+    const nextId = allBadges.value.length ? Math.max(...allBadges.value.map(b => b.id)) + 1 : 1
+    allBadges.value.unshift({ id: nextId, ...payload })
+  }
+
+  startCreateBadge()
+}
+
+function removeBadge(id) {
+  allBadges.value = allBadges.value.filter(b => b.id !== id)
+  earnedBadges.value = earnedBadges.value.filter(e => e.badge !== id)
+  if (editingBadgeId.value === id) startCreateBadge()
+}
+
 async function loadBadges() {
   try {
     loading.value = true
@@ -152,6 +254,126 @@ onMounted(() => {
           Мои достижения
         </h3>
         <p class="text-muted mb-0 small">Отслеживайте прогресс и получайте награды за успехи</p>
+      </div>
+    </div>
+
+    <div class="card badge-management-card shadow-sm border-0 mb-4">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <h5 class="mb-0 d-flex align-items-center gap-2">
+            <Award :size="18" class="text-primary" />
+            Управление достижениями
+          </h5>
+          <button
+            v-if="formMode === 'edit'"
+            class="btn btn-outline-secondary btn-sm"
+            @click="startCreateBadge"
+          >
+            <X :size="14" class="me-1" /> Отменить редактирование
+          </button>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-7">
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label class="form-label small mb-1">Название</label>
+                <input v-model="badgeForm.name" class="form-control form-control-sm" placeholder="Например: Спринтер" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small mb-1">Тип достижения</label>
+                <input v-model="badgeForm.badge_type" class="form-control form-control-sm" placeholder="Например: sprint_5" />
+              </div>
+              <div class="col-12">
+                <label class="form-label small mb-1">Описание</label>
+                <textarea v-model="badgeForm.description" class="form-control form-control-sm" rows="2" placeholder="Короткое описание достижения"></textarea>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Категория</label>
+                <select v-model="badgeForm.category" class="form-select form-select-sm">
+                  <option v-for="category in categoryOptions" :key="category" :value="category">{{ category }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Уровень</label>
+                <select v-model="badgeForm.tier" class="form-select form-select-sm">
+                  <option value="bronze">Бронза</option>
+                  <option value="silver">Серебро</option>
+                  <option value="gold">Золото</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Иконка</label>
+                <select v-model="badgeForm.icon" class="form-select form-select-sm">
+                  <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">XP</label>
+                <input v-model.number="badgeForm.xp" type="number" min="0" class="form-control form-control-sm" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Прогресс: текущее</label>
+                <input v-model.number="badgeForm.progress_current" type="number" min="0" class="form-control form-control-sm" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Прогресс: цель</label>
+                <input v-model.number="badgeForm.progress_target" type="number" min="0" class="form-control form-control-sm" />
+              </div>
+              <div class="col-12">
+                <label class="form-label small mb-1">Критерий получения</label>
+                <input v-model="badgeForm.criteria" class="form-control form-control-sm" placeholder="Что нужно сделать для получения" />
+              </div>
+              <div class="col-12 d-flex justify-content-between align-items-center">
+                <div class="form-check form-switch">
+                  <input id="badge-active-switch" v-model="badgeForm.is_active" class="form-check-input" type="checkbox" />
+                  <label class="form-check-label small" for="badge-active-switch">Активное достижение</label>
+                </div>
+                <button
+                  class="btn btn-primary btn-sm"
+                  :disabled="!badgeForm.name.trim() || !badgeForm.badge_type.trim()"
+                  @click="upsertBadge"
+                >
+                  <component :is="formMode === 'edit' ? Save : Plus" :size="14" class="me-1" />
+                  {{ formMode === 'edit' ? 'Сохранить изменения' : 'Добавить достижение' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="management-list-header mb-2">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><Search :size="14" /></span>
+                <input v-model="manageSearch" class="form-control" placeholder="Поиск в списке..." />
+              </div>
+            </div>
+            <div class="management-list">
+              <div v-if="managedBadges.length === 0" class="text-muted small py-3 text-center">
+                Ничего не найдено
+              </div>
+              <div v-else v-for="badge in managedBadges" :key="`manage-${badge.id}`" class="management-item">
+                <div class="d-flex align-items-center gap-2 min-w-0">
+                  <div :class="`manage-icon ${getTier(badge.tier).class}`">
+                    <component :is="getIcon(badge.icon)" :size="14" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="fw-semibold text-truncate">{{ badge.name }}</div>
+                    <small class="text-muted">{{ badge.category }} · {{ badge.badge_type }}</small>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                  <button class="btn btn-outline-primary btn-sm" @click="startEditBadge(badge)">
+                    <Pencil :size="13" />
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" @click="removeBadge(badge.id)">
+                    <Trash2 :size="13" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
