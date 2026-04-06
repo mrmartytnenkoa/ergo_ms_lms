@@ -8,7 +8,7 @@ from .views import (
     AssignmentViewSet, SubmittedAssignmentViewSet,
     CalendarEventViewSet, BadgeViewSet, UserBadgeViewSet,
     NotificationViewSet, PrivateMessageViewSet, UserRoleViewSet,
-    QuestionViewSet, AnswerViewSet, LessonItemViewSet
+    QuestionViewSet, AnswerViewSet, LessonItemViewSet, GradeViewSet
 )
 
 # Создаем роутер для API
@@ -34,6 +34,7 @@ router.register(r'questions', QuestionViewSet, basename='question')
 router.register(r'answers', AnswerViewSet, basename='answer')
 router.register(r'test-attempts', TestAttemptViewSet, basename='testattempt')
 router.register(r'assignments', AssignmentViewSet, basename='assignment')
+router.register(r'grades', GradeViewSet, basename='grade')
 router.register(r'submitted-assignments', SubmittedAssignmentViewSet, basename='submittedassignment')
 router.register(r'calendar', CalendarEventViewSet, basename='calendarevent')
 router.register(r'badges', BadgeViewSet, basename='badge')

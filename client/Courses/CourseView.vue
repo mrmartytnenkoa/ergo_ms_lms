@@ -16,7 +16,7 @@
             <nav aria-label="breadcrumb">
               <ol class="breadcrumb">
                 <li class="breadcrumb-item">
-                  <router-link to="/lms/catalog">Каталог курсов</router-link>
+                  <router-link to="/lms/courses">Мои курсы</router-link>
                 </li>
                 <li class="breadcrumb-item active">{{ course.name }}</li>
               </ol>
@@ -280,27 +280,34 @@ const totalAssignments = computed(() => {
   }, 0)
 })
 
-// Загрузка данных курса
 async function loadCourse() {
   try {
     loading.value = true
-    
-    // Загружаем структуру курса
-    const structureResponse = await apiClient.get(endpoints.lms.subjectStructure(courseId))
-    if (structureResponse.success) {
-      course.value = structureResponse.data.course
-      structure.value = structureResponse.data.structure || []
-      
-      // Загружаем элементы для каждого урока
-      await loadLessonItems()
+
+    let structureData = null
+    let usedMock = false
+
+    try {
+      const res = await apiClient.get(endpoints.lms.subjectStructure(courseId))
+      if (res.success) structureData = res.data
+    } catch {
+      // fallback to mock
     }
-    
-    // Загружаем информацию о записи студента
+
+    if (!structureData) {
+      structureData = lmsApi.getCourseStructureMock(courseId).data
+      usedMock = true
+    }
+
+    course.value = structureData.course
+    structure.value = structureData.structure || []
+
+    // Элементы уроков уже встроены в mock-структуру, запрашиваем только для реального API
+    if (!usedMock) await loadLessonItems()
+
     await loadEnrollmentInfo()
-    
-    // Загружаем завершенные уроки
     loadCompletedLessons()
-    
+
   } catch (error) {
     console.error('Ошибка загрузки курса:', error)
     course.value = null
@@ -312,31 +319,25 @@ async function loadCourse() {
 // Загрузка элементов уроков
 async function loadLessonItems() {
   try {
-    for (const theme of structure.value) {
+      for (const theme of structure.value) {
       for (const lesson of theme.lessons || []) {
         try {
-          console.log(`📚 Загружаем элементы для урока ${lesson.id}: ${lesson.name}`)
           const itemsResponse = await lmsApi.getLessonItems(lesson.id)
-          console.log(`✅ Элементы урока ${lesson.id} загружены:`, itemsResponse.data)
           lesson.items = itemsResponse.data.results || itemsResponse.data || []
         } catch (error) {
-          console.warn(`❌ Не удалось загрузить элементы урока ${lesson.id}:`, error)
+          console.warn(`Не удалось загрузить элементы урока ${lesson.id}:`, error)
           lesson.items = []
         }
       }
     }
   } catch (error) {
-    console.error('❌ Ошибка загрузки элементов уроков:', error)
+    console.error('Ошибка загрузки элементов уроков:', error)
   }
 }
 
 // Загрузка информации о записи
 async function loadEnrollmentInfo() {
-  // Информация о записи актуальна только для студентов
-  if (!userRole.isStudent?.value) {
-    console.log('Информация о записи доступна только студентам')
-    return
-  }
+  if (!userRole.isStudent?.value) return
   
   try {
     const enrollmentResponse = await apiClient.get(endpoints.lms.enrollments, {
@@ -353,16 +354,9 @@ async function loadEnrollmentInfo() {
 
 // Загрузка завершенных уроков из localStorage
 function loadCompletedLessons() {
-  // Прогресс уроков актуален только для студентов
-  if (!userRole.isStudent?.value) {
-    console.log('Прогресс уроков доступен только студентам')
-    return
-  }
+  if (!userRole.isStudent?.value) return
   
   try {
-    console.log('📊 Загружаем завершенные уроки для курса:', courseId)
-    
-    // Проходим по всем урокам и проверяем их прогресс
     for (const theme of structure.value) {
       for (const lesson of theme.lessons || []) {
         const storageKey = `lesson_progress_${courseId}_${lesson.id}`
@@ -373,19 +367,15 @@ function loadCompletedLessons() {
             const progressData = JSON.parse(savedProgress)
             if (progressData.completed) {
               completedLessons.value.add(lesson.id)
-              console.log(`✅ Урок "${lesson.name}" отмечен как завершенный`)
             }
           } catch (error) {
-            console.warn(`⚠️ Ошибка загрузки прогресса урока ${lesson.id}:`, error)
+            console.warn(`Ошибка загрузки прогресса урока ${lesson.id}:`, error)
           }
         }
       }
     }
-    
-    console.log(`📈 Загружено завершенных уроков: ${completedLessons.value.size}`)
-    
   } catch (error) {
-    console.error('❌ Ошибка загрузки завершенных уроков:', error)
+    console.error('Ошибка загрузки завершенных уроков:', error)
   }
 }
 
@@ -461,12 +451,11 @@ function isLessonCompleted(lesson) {
     try {
       const progressData = JSON.parse(savedProgress)
       if (progressData.completed) {
-        // Добавляем в локальный набор для быстрого доступа
         completedLessons.value.add(lesson.id)
         return true
       }
     } catch (error) {
-      console.warn('⚠️ Ошибка проверки прогресса урока:', error)
+      console.warn('Ошибка проверки прогресса урока:', error)
     }
   }
   
@@ -481,10 +470,8 @@ function getThemeProgress(theme) {
 }
 
 function openLesson(lesson) {
-  // Авторизованные пользователи могут открывать уроки для просмотра
   if (canAccessLesson(lesson)) {
     selectedLesson.value = lesson
-    console.log(`Открываем урок для ${userRole.isStudent?.value ? 'прохождения' : 'просмотра'}: ${lesson.name}`)
   }
 }
 
@@ -493,11 +480,7 @@ function closeLessonModal() {
 }
 
 function onLessonCompleted(lessonId) {
-  // Только студенты могут отмечать уроки как завершенные
-  if (!userRole.isStudent?.value) {
-    console.log('Отмечать уроки как завершенные могут только студенты')
-    return
-  }
+  if (!userRole.isStudent?.value) return
   
   completedLessons.value.add(lessonId)
   closeLessonModal()

@@ -222,6 +222,34 @@ class CourseFormatViewSet(SwaggerSafeMixin, BaseLMSViewSet):
             subject__is_published=True
         ).distinct()
 
+
+class GradeViewSet(SwaggerSafeMixin, BaseLMSViewSet):
+    """ViewSet для оценок"""
+    queryset = Grade.objects.all()
+    serializer_class = GradeSerializer
+    search_fields = ['subject__name', 'feedback']
+    ordering_fields = ['related', 'grade', 'subject__name']
+    ordering = ['-related']
+
+    def get_queryset(self):
+        if self.is_swagger_fake_view():
+            return Grade.objects.none()
+
+        user = self.get_safe_user()
+        if not user:
+            return Grade.objects.none()
+
+        queryset = Grade.objects.select_related('subject', 'student', 'grader')
+
+        # Поддержка запроса ?student=me
+        student_param = self.request.query_params.get('student')
+        if student_param == 'me':
+            queryset = queryset.filter(student=user)
+        elif student_param:
+            queryset = queryset.filter(student_id=student_param)
+
+        return queryset
+
 class SubjectViewSet(SwaggerSafeMixin, BaseLMSViewSet):
     """ViewSet для курсов (предметов)"""
     queryset = Subject.objects.all()

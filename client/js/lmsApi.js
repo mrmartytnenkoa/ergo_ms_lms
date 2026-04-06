@@ -16,6 +16,56 @@ export const lmsApi = {
     return await apiClient.get(endpoints.lms.subjectStructure(id))
   },
 
+  getCourseStructureMock(id) {
+    const { courses, themes, lessons, tests, assignments, resources } = mockData.lessonsManagement
+
+    const catalogCourse = mockData.catalogData.find(c => c.id == id)
+    const lmIdx = catalogCourse
+      ? (mockData.catalogData.indexOf(catalogCourse) % courses.length)
+      : Math.max(0, courses.findIndex(c => c.id == id))
+    const lmCourse = courses[lmIdx] || courses[0]
+
+    const courseMeta = catalogCourse
+      ? {
+          id: catalogCourse.id,
+          name: catalogCourse.name,
+          description: catalogCourse.summary || catalogCourse.description,
+          teacher: catalogCourse.teacher,
+          category: catalogCourse.category,
+          course_format: catalogCourse.course_format,
+          is_published: catalogCourse.is_published,
+        }
+      : {
+          id: lmCourse.id,
+          name: lmCourse.name,
+          description: lmCourse.description,
+          teacher: lmCourse.teacher,
+          category: lmCourse.category,
+          course_format: lmCourse.course_format,
+          is_published: lmCourse.is_published,
+        }
+
+    const structure = themes
+      .filter(t => t.subject === lmCourse.id)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(theme => ({
+        ...theme,
+        lessons: lessons
+          .filter(l => l.theme === theme.id)
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map(lesson => ({
+            ...lesson,
+            items: [
+              ...tests.filter(t => t.lesson === lesson.id).map(t => ({ ...t, item_type: 'test' })),
+              ...assignments.filter(a => a.lesson === lesson.id).map(a => ({ ...a, item_type: 'assignment' })),
+              ...resources.filter(r => r.lesson === lesson.id).map(r => ({ ...r, item_type: 'resource' })),
+            ],
+          })),
+      }))
+
+    return { success: true, data: { course: courseMeta, structure } }
+  },
+
   async enrollInCourse(courseId) {
     return await apiClient.post(endpoints.lms.enrollments, {
       subject: courseId
@@ -23,9 +73,7 @@ export const lmsApi = {
   },
 
   async unenrollFromCourse(courseId) {
-    const enrollments = await apiClient.get(endpoints.lms.enrollments, {
-      params: { subject: courseId }
-    })
+    const enrollments = await apiClient.get(endpoints.lms.enrollments, { subject: courseId })
     const enrollment = enrollments.data.results?.[0]
     if (enrollment) {
       return await apiClient.delete(`${endpoints.lms.enrollments}${enrollment.id}/`)
@@ -48,18 +96,10 @@ export const lmsApi = {
   },
 
   async getLessonItems(lessonId) {
-    console.log(`lmsApi.getLessonItems вызван для урока ID: ${lessonId}`)
-    
-    // Формируем URL с параметром напрямую
-    const url = `${endpoints.lms.lessonItems}?lesson_id=${lessonId}`
-    console.log(`URL запроса: ${url}`)
-    
     try {
-      const response = await apiClient.get(url)
-      console.log(`Успешный ответ для урока ${lessonId}:`, response.data)
-      return response
+      return await apiClient.get(`${endpoints.lms.lessonItems}?lesson_id=${lessonId}`)
     } catch (error) {
-      console.error(`Ошибка в lmsApi.getLessonItems для урока ${lessonId}:`, error)
+      console.error(`Ошибка загрузки элементов урока ${lessonId}:`, error)
       throw error
     }
   },
@@ -162,14 +202,12 @@ export const lmsApi = {
 
   // Оценки
   async getGrades() {
-    return await apiClient.get(endpoints.lms.grades, {
-      params: { student: 'me' }
-    })
+    return await apiClient.get(endpoints.lms.grades, { student: 'me' })
   },
 
   async getMyGrades() {
     try {
-      const response = await apiClient.get(endpoints.lms.grades, { params: { student: 'me' } })
+      const response = await apiClient.get(endpoints.lms.grades, { student: 'me' })
       const data = response.data?.results || response.data || []
       if (data.length > 0) return { data }
     } catch (e) {
@@ -315,7 +353,24 @@ export const lmsApi = {
     try {
       const response = await apiClient.get(endpoints.lms.enrollments)
       const data = response.data?.results || response.data || []
-      if (data.length > 0) return { data }
+      if (data.length > 0) {
+        const normalized = data.map(e => ({
+          ...e,
+          subjectId: e.subject?.id ?? e.subjectId,
+          name: e.subject?.name ?? e.name,
+          description: e.subject?.description ?? e.description,
+          instructor: e.subject?.teacher
+            ? `${e.subject.teacher.first_name} ${e.subject.teacher.last_name}`.trim() || e.subject.teacher.username
+            : (e.instructor ?? ''),
+          category: e.subject?.category?.name ?? e.category,
+          course_format: e.subject?.course_format?.name ?? e.course_format,
+          progress: e.progress_percentage ?? e.progress ?? 0,
+          studentsCount: e.subject?.enrolled_students_count ?? e.studentsCount ?? 0,
+          isFavorite: e.isFavorite ?? false,
+          image: e.subject?.course_image ?? e.image ?? null,
+        }))
+        return { data: normalized }
+      }
     } catch (e) {
       console.error('Ошибка загрузки моих курсов:', e)
     }
@@ -387,66 +442,40 @@ export const lmsApi = {
     return Math.round(sum / grades.length)
   },
 
-  // Расчет прогресса курса
   async calculateCourseProgress(courseId) {
     try {
-      console.log(`Расчет прогресса для курса ID: ${courseId}`)
-      
-      // Получаем структуру курса
       const structureResponse = await this.getCourseStructure(courseId)
-      const themes = structureResponse.data?.themes || []
+      const themes = structureResponse.data?.structure || structureResponse.data?.themes || []
       
-      if (themes.length === 0) {
-        console.log(`Курс ${courseId} не имеет тем, прогресс 0%`)
-        return 0
-      }
+      if (themes.length === 0) return 0
       
       let totalLessons = 0
       let completedLessons = 0
       
-      // Подсчитываем общее количество уроков
       for (const theme of themes) {
-        if (theme.lessons && theme.lessons.length > 0) {
-          totalLessons += theme.lessons.length
-        }
+        if (theme.lessons?.length > 0) totalLessons += theme.lessons.length
       }
       
-      if (totalLessons === 0) {
-        console.log(`Курс ${courseId} не имеет уроков, прогресс 0%`)
-        return 0
-      }
+      if (totalLessons === 0) return 0
       
-      // Пытаемся получить прогресс из API
       try {
         const progressResponse = await apiClient.get(`${endpoints.lms.studentProgress}?course_id=${courseId}`)
         if (progressResponse.data?.completed_lessons_count !== undefined) {
           completedLessons = progressResponse.data.completed_lessons_count
-          console.log(`Загружен реальный прогресс курса ${courseId}: ${completedLessons}/${totalLessons}`)
         }
-      } catch (progressError) {
-        console.log(`API прогресса недоступен для курса ${courseId}, используем стабильную оценку`)
-        
-        // Используем стабильную оценку на основе ID курса (не случайную)
-        // Это даст одинаковый результат для одного курса
+      } catch {
         const seed = parseInt(courseId) || 1
-        const progressPercentage = ((seed * 17) % 71) + 15 // 15-85%
+        const progressPercentage = ((seed * 17) % 71) + 15
         completedLessons = Math.floor((totalLessons * progressPercentage) / 100)
       }
       
-      const progress = Math.round((completedLessons / totalLessons) * 100)
-      const finalProgress = Math.min(progress, 100) // Максимум 100%
-      
-      console.log(`Финальный прогресс курса ${courseId}: ${finalProgress}% (${completedLessons}/${totalLessons})`)
+      const finalProgress = Math.min(Math.round((completedLessons / totalLessons) * 100), 100)
       return finalProgress
       
     } catch (error) {
       console.error(`Ошибка расчета прогресса курса ${courseId}:`, error)
-      
-      // Используем стабильную fallback логику вместо случайной
       const seed = parseInt(courseId) || 1
-      const fallbackProgress = ((seed * 23) % 60) + 10 // 10-69%
-      console.log(`Fallback прогресс для курса ${courseId}: ${fallbackProgress}%`)
-      return fallbackProgress
+      return ((seed * 23) % 60) + 10
     }
   },
 

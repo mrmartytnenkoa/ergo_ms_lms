@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import {
   BookOpen, Play, CheckCircle, Clock, Users, Star, Search,
-  ArrowRight, Award, Pause, GraduationCap, Heart, Video,
+  ArrowRight, Award, Pause, GraduationCap, Video,
   FileText, PenTool
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
@@ -19,27 +19,13 @@ const tabs = [
   { key: 'all', label: 'Все' },
   { key: 'active', label: 'В процессе' },
   { key: 'completed', label: 'Завершённые' },
-  { key: 'favorite', label: 'Избранные' },
-  { key: 'paused', label: 'Приостановленные' }
-]
-
-const stats = computed(() => ({
-  total: courses.value.length,
-  active: courses.value.filter(c => c.status === 'active').length,
-  completed: courses.value.filter(c => c.status === 'completed').length,
-  favorites: courses.value.filter(c => c.isFavorite).length
-}))
-
-const statItems = [
-  { key: 'total', label: 'Всего', icon: BookOpen, color: 'primary' },
-  { key: 'active', label: 'В процессе', icon: Play, color: 'info' },
-  { key: 'completed', label: 'Завершено', icon: CheckCircle, color: 'success' },
-  { key: 'favorites', label: 'Избранные', icon: Heart, color: 'danger' }
+  { key: 'favorite', label: 'Избранные' }
 ]
 
 function tabCount(key) {
   if (key === 'all') return courses.value.length
   if (key === 'favorite') return courses.value.filter(c => c.isFavorite).length
+  if (key === 'active') return courses.value.filter(c => c.status === 'active' || c.status === 'paused').length
   return courses.value.filter(c => c.status === key).length
 }
 
@@ -58,6 +44,8 @@ const filteredCourses = computed(() => {
   if (activeTab.value !== 'all') {
     if (activeTab.value === 'favorite') {
       filtered = filtered.filter(c => c.isFavorite)
+    } else if (activeTab.value === 'active') {
+      filtered = filtered.filter(c => c.status === 'active' || c.status === 'paused')
     } else {
       filtered = filtered.filter(c => c.status === activeTab.value)
     }
@@ -107,7 +95,8 @@ function getCourseImageUrl(course) {
 }
 
 function openCourse(course) {
-  router.push({ name: 'LMSCourseView', params: { id: course.subjectId } })
+  const id = course.subjectId ?? course.subject?.id ?? course.id
+  if (id) router.push({ name: 'LMSCourseView', params: { id } })
 }
 
 async function toggleFavorite(course) {
@@ -125,23 +114,6 @@ onMounted(fetchCourses)
 <template>
   <div class="courses-view">
     <h3 class="mb-4">Мои курсы</h3>
-
-    <!-- Stat cards -->
-    <div class="row mb-4 g-3">
-      <div v-for="item in statItems" :key="item.key" class="col-xl-3 col-md-6 col-6">
-        <div class="card border-0 shadow-sm h-100 stat-card">
-          <div class="card-body d-flex align-items-center gap-3 py-3">
-            <div class="stat-icon-wrapper" :class="`bg-${item.color}-subtle`">
-              <component :is="item.icon" :size="20" :class="`text-${item.color}`" />
-            </div>
-            <div>
-              <p class="stat-label text-muted mb-1">{{ item.label }}</p>
-              <h4 class="stat-value mb-0">{{ stats[item.key] }}</h4>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Tabs + Search -->
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
