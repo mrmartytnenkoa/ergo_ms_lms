@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { BookOpen, FolderOpen, FileText, Eye, FileCheck, ClipboardList, Paperclip } from 'lucide-vue-next'
+import { BookOpen, FolderOpen, FileText, FileCheck, ClipboardList } from 'lucide-vue-next'
 
 defineProps({
   stats: { type: Object, required: true }
@@ -27,10 +27,8 @@ const statItems = [
   { key: 'totalCourses', label: 'Курсов', icon: BookOpen, color: 'primary' },
   { key: 'totalThemes', label: 'Тем', icon: FolderOpen, color: 'success' },
   { key: 'totalLessons', label: 'Уроков', icon: FileText, color: 'info' },
-  { key: 'visibleLessons', label: 'Видимых', icon: Eye, color: 'warning' },
   { key: 'totalTests', label: 'Тестов', icon: FileCheck, color: 'danger' },
-  { key: 'totalAssignments', label: 'Заданий', icon: ClipboardList, color: 'secondary' },
-  { key: 'totalResources', label: 'Ресурсов', icon: Paperclip, color: 'dark' }
+  { key: 'totalAssignments', label: 'Заданий', icon: ClipboardList, color: 'secondary' }
 ]
 </script>
 

@@ -155,17 +155,13 @@
         <div class="col-md-6">
           <div class="mb-3">
             <label class="form-label">Курс *</label>
-            <select 
-              v-model="form.course" 
-              class="form-select"
-              :class="{ 'is-invalid': errors.course }"
-              @change="onCourseChange"
-            >
-              <option value="">Выберите курс</option>
-              <option v-for="course in courses" :key="course.id" :value="course.id">
-                {{ course.name }}
-              </option>
-            </select>
+            <SearchableCourseSelect
+              :model-value="form.course"
+              :courses="courses"
+              :invalid="Boolean(errors.course)"
+              placeholder="Поиск и выбор курса"
+              @update:model-value="onCourseChange"
+            />
             <div v-if="errors.course" class="invalid-feedback">
               {{ errors.course }}
             </div>
@@ -200,6 +196,7 @@
 import { ref, watch, computed } from 'vue'
 import { BookOpen } from 'lucide-vue-next'
 import BaseModal from '../BaseModal.vue'
+import SearchableCourseSelect from '../SearchableCourseSelect.vue'
 import { showError } from '@/js/utils/notifications'
 
 const props = defineProps({
@@ -329,7 +326,8 @@ function fillFormForCreation(data) {
   console.log('✅ Форма предзаполнена:', form.value)
 }
 
-function onCourseChange() {
+function onCourseChange(courseId) {
+  form.value.course = courseId
   // Сбрасываем выбранную тему при изменении курса
   form.value.theme = null
 }

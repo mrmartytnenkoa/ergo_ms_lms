@@ -553,7 +553,7 @@ export default {
       { id: 11, name: 'Помощник', description: 'Получить 10 благодарностей за ответы', badge_type: 'helpful_10', category: 'Социальные', tier: 'silver', criteria: 'Получить 10 отметок "Полезный ответ" на форуме', icon: 'Heart', xp: 200, is_active: true },
       { id: 12, name: 'Наставник', description: 'Помочь 25 студентам на форуме', badge_type: 'mentor', category: 'Социальные', tier: 'gold', criteria: 'Получить 25 отметок "Полезный ответ"', icon: 'Users', xp: 400, is_active: true },
       { id: 13, name: 'Быстрый старт', description: 'Завершить урок в первые 24 часа после записи', badge_type: 'early_bird', category: 'Мастерство', tier: 'bronze', criteria: 'Пройти первый урок в течение 24 часов после записи на курс', icon: 'Zap', xp: 75, is_active: true },
-      { id: 14, name: 'Скорострел', description: 'Пройти тест без ошибок', badge_type: 'perfect_test', category: 'Мастерство', tier: 'silver', criteria: 'Получить 100% за любой тест', icon: 'Target', xp: 300, is_active: true },
+      { id: 14, name: 'Спринтер', description: 'Пройти тест без ошибок', badge_type: 'perfect_test', category: 'Мастерство', tier: 'silver', criteria: 'Получить 100% за любой тест', icon: 'Target', xp: 300, is_active: true },
       { id: 15, name: 'Мастер', description: 'Набрать 100 часов обучения', badge_type: 'hours_100', category: 'Мастерство', tier: 'gold', criteria: 'Суммарно провести 100 часов за обучением', icon: 'Crown', xp: 750, is_active: true, progress: { current: 47, target: 100 } }
     ],
     earnedBadges: [

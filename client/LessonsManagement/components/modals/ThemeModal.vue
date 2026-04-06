@@ -27,16 +27,12 @@
 
       <div class="mb-3">
         <label class="form-label">Курс *</label>
-        <select 
-          v-model="form.subject" 
-          class="form-select"
-          :class="{ 'is-invalid': errors.subject }"
-        >
-          <option value="">Выберите курс</option>
-          <option v-for="course in courses" :key="course.id" :value="course.id">
-            {{ course.name }}
-          </option>
-        </select>
+        <SearchableCourseSelect
+          v-model="form.subject"
+          :courses="courses"
+          :invalid="Boolean(errors.subject)"
+          placeholder="Поиск и выбор курса"
+        />
         <div v-if="errors.subject" class="invalid-feedback">
           {{ errors.subject }}
         </div>
@@ -91,6 +87,7 @@
 import { ref, watch } from 'vue'
 import { FolderOpen } from 'lucide-vue-next'
 import BaseModal from '../BaseModal.vue'
+import SearchableCourseSelect from '../SearchableCourseSelect.vue'
 import { showError } from '@/js/utils/notifications'
 
 const props = defineProps({

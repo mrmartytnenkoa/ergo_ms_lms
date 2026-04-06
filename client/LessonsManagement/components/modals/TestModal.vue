@@ -61,18 +61,13 @@
         <div class="col-md-4">
           <div class="mb-3">
             <label class="form-label">Курс *</label>
-            <select 
-              v-model="form.course" 
-              @change="onCourseChange"
-              class="form-select"
-              :class="{ 'is-invalid': validationErrors.course }"
-              required
-            >
-              <option value="">Выберите курс</option>
-              <option v-for="course in courses" :key="course.id" :value="course.id">
-                {{ course.name }}
-              </option>
-            </select>
+            <SearchableCourseSelect
+              :model-value="form.course"
+              :courses="courses"
+              :invalid="Boolean(validationErrors.course)"
+              placeholder="Поиск и выбор курса"
+              @update:model-value="onCourseChange"
+            />
             <div v-if="validationErrors.course" class="invalid-feedback">
               {{ validationErrors.course }}
             </div>
@@ -293,6 +288,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { FileCheck, Settings, Info } from 'lucide-vue-next'
 import BaseModal from '../BaseModal.vue'
+import SearchableCourseSelect from '../SearchableCourseSelect.vue'
 import QuestionManagementModal from './QuestionManagementModal.vue'
 
 const props = defineProps({
@@ -352,7 +348,8 @@ const filteredLessons = computed(() => {
   })
 })
 
-function onCourseChange() {
+function onCourseChange(courseId) {
+  form.value.course = courseId
   form.value.theme = null
   form.value.lesson = null
 }

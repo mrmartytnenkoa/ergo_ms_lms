@@ -19,7 +19,6 @@ export function useLessonsData() {
   const searchQuery = ref('')
   const selectedCategory = ref('')
   const selectedFormat = ref('')
-  const selectedStatus = ref('')
   const sortBy = ref('name')
   const sortOrder = ref('asc')
   
@@ -42,16 +41,6 @@ export function useLessonsData() {
         lesson.name.toLowerCase().includes(query) ||
         lesson.description.toLowerCase().includes(query)
       )
-    }
-
-    if (selectedStatus.value) {
-      if (selectedStatus.value === 'visible') {
-        filtered = filtered.filter(lesson => lesson.is_visible)
-      } else if (selectedStatus.value === 'hidden') {
-        filtered = filtered.filter(lesson => !lesson.is_visible)
-      } else if (selectedStatus.value === 'required') {
-        filtered = filtered.filter(lesson => lesson.completion_required)
-      }
     }
 
     return filtered
@@ -610,7 +599,6 @@ export function useLessonsData() {
     searchQuery,
     selectedCategory,
     selectedFormat,
-    selectedStatus,
     sortBy,
     sortOrder,
     

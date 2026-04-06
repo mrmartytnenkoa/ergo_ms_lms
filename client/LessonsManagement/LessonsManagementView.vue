@@ -20,7 +20,6 @@
         :searchQuery="lessonsData.searchQuery.value"
         :selectedCategory="lessonsData.selectedCategory.value"
         :selectedFormat="lessonsData.selectedFormat.value"
-        :selectedStatus="lessonsData.selectedStatus.value"
         :sortBy="lessonsData.sortBy.value"
         :sortOrder="lessonsData.sortOrder.value"
         :courses="lessonsData.courses.value"
@@ -30,7 +29,6 @@
         @update:searchQuery="lessonsData.searchQuery.value = $event"
         @update:selectedCategory="lessonsData.selectedCategory.value = $event"
         @update:selectedFormat="lessonsData.selectedFormat.value = $event"
-        @update:selectedStatus="lessonsData.selectedStatus.value = $event"
         @update:sortBy="lessonsData.sortBy.value = $event"
         @update:sortOrder="lessonsData.sortOrder.value = $event"
       />

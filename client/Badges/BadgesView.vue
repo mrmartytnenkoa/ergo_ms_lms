@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import {
-  Award, CheckCircle, Target, TrendingUp, Zap, Search, Lock,
+  Award, CheckCircle, Target, TrendingUp, Search, Lock,
   BookOpen, GraduationCap, Library, Flame, Timer, Star,
-  Sparkles, MessageSquare, Heart, Users, Crown, Plus, Pencil, Trash2, Save, X
+  Sparkles, MessageSquare, Heart, Users, Zap, Crown, Plus, Pencil, Trash2, Save, X
 } from 'lucide-vue-next'
 import VueApexCharts from 'vue3-apexcharts'
 import { lmsApi } from '../js/lmsApi'
@@ -27,7 +27,6 @@ const defaultBadgeForm = () => ({
   tier: 'bronze',
   criteria: '',
   icon: 'Award',
-  xp: 100,
   is_active: true,
   progress_current: null,
   progress_target: null
@@ -83,20 +82,15 @@ const statItems = [
   { key: 'earned', label: 'Получено', icon: CheckCircle, color: 'success' },
   { key: 'available', label: 'Доступно', icon: Target, color: 'primary' },
   { key: 'progress', label: 'Прогресс', icon: TrendingUp, color: 'warning' },
-  { key: 'xp', label: 'Очков XP', icon: Zap, color: 'info' }
 ]
 
 const stats = computed(() => {
   const earned = earnedBadges.value.length
   const total = allBadges.value.length
-  const xp = allBadges.value
-    .filter(b => isEarned(b.id))
-    .reduce((s, b) => s + (b.xp || 0), 0)
   return {
     earned,
     available: total,
     progress: total > 0 ? Math.round((earned / total) * 100) + '%' : '0%',
-    xp
   }
 })
 
@@ -176,7 +170,6 @@ function startEditBadge(badge) {
     tier: badge.tier || 'bronze',
     criteria: badge.criteria || '',
     icon: badge.icon || 'Award',
-    xp: Number(badge.xp ?? 0),
     is_active: Boolean(badge.is_active),
     progress_current: badge.progress?.current ?? null,
     progress_target: badge.progress?.target ?? null
@@ -195,7 +188,6 @@ function upsertBadge() {
     tier: badgeForm.value.tier,
     criteria: badgeForm.value.criteria.trim(),
     icon: badgeForm.value.icon,
-    xp: Number(badgeForm.value.xp || 0),
     is_active: Boolean(badgeForm.value.is_active)
   }
 
@@ -307,10 +299,6 @@ onMounted(() => {
                 <select v-model="badgeForm.icon" class="form-select form-select-sm">
                   <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
                 </select>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label small mb-1">XP</label>
-                <input v-model.number="badgeForm.xp" type="number" min="0" class="form-control form-control-sm" />
               </div>
               <div class="col-md-4">
                 <label class="form-label small mb-1">Прогресс: текущее</label>
@@ -427,9 +415,6 @@ onMounted(() => {
                   </div>
                   <div class="text-end">
                     <span class="text-muted small">{{ formatDate(badge.awarded_at) }}</span>
-                    <div>
-                      <span class="xp-badge bg-info-subtle text-info">+{{ badge.xp }} XP</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -504,10 +489,9 @@ onMounted(() => {
               <h6 class="fw-bold mb-1" :class="{ 'text-muted': !isEarned(badge.id) }">{{ badge.name }}</h6>
               <p class="text-muted small mb-2" style="min-height: 2.4em">{{ badge.description }}</p>
 
-              <!-- Tier + XP -->
-              <div class="d-flex justify-content-center gap-2 mb-2">
+              <!-- Tier -->
+              <div class="d-flex justify-content-center mb-2">
                 <span :class="`tier-badge ${getTier(badge.tier).badgeClass}`">{{ getTier(badge.tier).label }}</span>
-                <span class="xp-badge bg-info-subtle text-info">+{{ badge.xp }} XP</span>
               </div>
 
               <!-- Progress bar (for unearned with progress) -->

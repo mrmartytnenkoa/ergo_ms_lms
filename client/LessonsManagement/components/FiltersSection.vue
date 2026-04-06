@@ -2,31 +2,19 @@
   <div>
     <!-- Фильтры -->
     <div class="row mb-4">
-      <div class="col-lg-3">
+      <div class="col-lg-4">
         <label class="form-label">Выберите курс</label>
-        <select :value="selectedCourseId" @input="$emit('update:selectedCourseId', $event.target.value)" class="form-select">
-          <option value="">Все курсы</option>
-          <option v-for="course in courses" :key="course.id" :value="course.id">
-            {{ course.name }}
-          </option>
-        </select>
+        <SearchableCourseSelect
+          :model-value="selectedCourseId"
+          :search-value="searchQuery"
+          :courses="courses"
+          :inline-menu="true"
+          placeholder="Поиск и выбор курса"
+          @update:model-value="$emit('update:selectedCourseId', $event)"
+          @update:search-value="$emit('update:searchQuery', $event)"
+        />
       </div>
-      <div class="col-lg-3">
-        <label class="form-label">Поиск</label>
-        <div class="input-group">
-          <span class="input-group-text">
-            <Search :size="16" />
-          </span>
-          <input
-            :value="searchQuery"
-            @input="$emit('update:searchQuery', $event.target.value)"
-            type="text"
-            class="form-control"
-            placeholder="Поиск по названию..."
-          />
-        </div>
-      </div>
-      <div class="col-lg-3">
+      <div class="col-lg-4">
         <label class="form-label">Категория</label>
         <select :value="selectedCategory" @input="$emit('update:selectedCategory', $event.target.value)" class="form-select">
           <option value="">Все категории</option>
@@ -35,7 +23,7 @@
           </option>
         </select>
       </div>
-      <div class="col-lg-3">
+      <div class="col-lg-4">
         <label class="form-label">Формат</label>
         <select :value="selectedFormat" @input="$emit('update:selectedFormat', $event.target.value)" class="form-select">
           <option value="">Все форматы</option>
@@ -48,28 +36,15 @@
 
     <!-- Сортировка -->
     <div class="row mb-4">
-      <div class="col-lg-4">
-        <label class="form-label">Сортировать по</label>
-        <select :value="sortBy" @input="$emit('update:sortBy', $event.target.value)" class="form-select">
-          <option value="name">Названию</option>
-          <option value="category">Категории</option>
-          <option value="format">Формату</option>
-        </select>
-      </div>
-      <div class="col-lg-4">
-        <label class="form-label">Порядок</label>
-        <select :value="sortOrder" @input="$emit('update:sortOrder', $event.target.value)" class="form-select">
-          <option value="asc">По возрастанию</option>
-          <option value="desc">По убыванию</option>
-        </select>
-      </div>
-      <div class="col-lg-4">
-        <label class="form-label">Статус</label>
-        <select :value="selectedStatus" @input="$emit('update:selectedStatus', $event.target.value)" class="form-select">
-          <option value="">Все</option>
-          <option value="visible">Видимые</option>
-          <option value="hidden">Скрытые</option>
-          <option value="required">Обязательные</option>
+      <div class="col-lg-6">
+        <label class="form-label">Сортировка</label>
+        <select :value="selectedSortOption" @input="onSortOptionChange" class="form-select">
+          <option value="name:asc">Название (A-Я)</option>
+          <option value="name:desc">Название (Я-A)</option>
+          <option value="category:asc">Категория (A-Я)</option>
+          <option value="category:desc">Категория (Я-A)</option>
+          <option value="format:asc">Формат (A-Я)</option>
+          <option value="format:desc">Формат (Я-A)</option>
         </select>
       </div>
     </div>
@@ -77,37 +52,33 @@
 </template>
 
 <script setup>
-import { Search } from 'lucide-vue-next'
+import { computed } from 'vue'
+import SearchableCourseSelect from './SearchableCourseSelect.vue'
 
-defineProps({
+const props = defineProps({
   selectedCourseId: String,
   searchQuery: String,
   selectedCategory: String,
   selectedFormat: String,
   sortBy: String,
   sortOrder: String,
-  selectedStatus: String,
   courses: Array,
   categories: Array,
   courseFormats: Array
 })
 
-defineEmits(['update:selectedCourseId', 'update:searchQuery', 'update:selectedCategory', 'update:selectedFormat', 'update:sortBy', 'update:sortOrder', 'update:selectedStatus'])
+const emit = defineEmits(['update:selectedCourseId', 'update:searchQuery', 'update:selectedCategory', 'update:selectedFormat', 'update:sortBy', 'update:sortOrder'])
+
+const selectedSortOption = computed(() => `${props.sortBy || 'name'}:${props.sortOrder || 'asc'}`)
+
+function onSortOptionChange(event) {
+  const [sortBy, sortOrder] = String(event.target.value || 'name:asc').split(':')
+  emit('update:sortBy', sortBy || 'name')
+  emit('update:sortOrder', sortOrder || 'asc')
+}
 </script>
 
 <style scoped>
-/* Центрирование иконки поиска */
-.input-group-text {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.input-group-text svg {
-  display: inline-block !important;
-  vertical-align: middle !important;
-}
-
 /* Центрирование для всех svg иконок */
 svg {
   display: inline-block !important;

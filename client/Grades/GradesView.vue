@@ -78,10 +78,21 @@ const groupedByCourse = computed(() => {
     .sort((a, b) => b.average - a.average)
 })
 
+const gradeRanges = [
+  { min: 90, key: 'success', hex: '#198754' },
+  { min: 70, key: 'primary', hex: '#0d6efd' },
+  { min: 50, key: 'warning', hex: '#ffc107' },
+  { min: -Infinity, key: 'danger', hex: '#dc3545' },
+]
+
+function getGradeRange(grade) {
+  return gradeRanges.find(range => grade >= range.min) || gradeRanges[gradeRanges.length - 1]
+}
+
 const donutOptions = computed(() => ({
   chart: { type: 'donut', height: 260 },
-  labels: ['Отлично (90+)', 'Хорошо (70-89)', 'Удовл. (50-69)', 'Неудовл. (<50)'],
-  colors: ['#198754', '#0d6efd', '#ffc107', '#dc3545'],
+  labels: ['Отлично (90+)', 'Хорошо (70-89)', 'Удовл. (50-69)', 'Не зачтено (<50)'],
+  colors: gradeRanges.map(range => range.hex),
   legend: { position: 'bottom', fontSize: '13px' },
   plotOptions: { pie: { donut: { size: '58%' } } },
   dataLabels: { enabled: true, formatter: (val) => val.toFixed(0) + '%' }
@@ -145,17 +156,24 @@ function isCourseExpanded(name) {
 }
 
 function getGradeColor(grade) {
-  if (grade >= 90) return 'success'
-  if (grade >= 70) return 'primary'
-  if (grade >= 50) return 'warning'
-  return 'danger'
+  return getGradeRange(grade).key
 }
 
 function getGradeBg(grade) {
-  if (grade >= 90) return 'bg-success-subtle text-success'
-  if (grade >= 70) return 'bg-primary-subtle text-primary'
-  if (grade >= 50) return 'bg-warning-subtle text-warning'
-  return 'bg-danger-subtle text-danger'
+  const color = getGradeColor(grade)
+  return `bg-${color}-subtle text-${color}`
+}
+
+function getGradeHex(grade) {
+  return getGradeRange(grade).hex
+}
+
+function getGradeSubtleBg(grade) {
+  const hex = getGradeHex(grade).replace('#', '')
+  const r = Number.parseInt(hex.slice(0, 2), 16)
+  const g = Number.parseInt(hex.slice(2, 4), 16)
+  const b = Number.parseInt(hex.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, 0.14)`
 }
 
 function getTypeIcon(type) {
@@ -344,11 +362,13 @@ onMounted(() => {
                   <div class="progress" style="width: 80px; height: 6px">
                     <div
                       class="progress-bar"
-                      :class="`bg-${getGradeColor(group.average)}`"
-                      :style="{ width: group.average + '%' }"
+                      :style="{ width: group.average + '%', backgroundColor: getGradeHex(group.average) }"
                     ></div>
                   </div>
-                  <span :class="`course-avg-badge bg-${getGradeColor(group.average)}-subtle text-${getGradeColor(group.average)}`">
+                  <span
+                    class="course-avg-badge"
+                    :style="{ color: getGradeHex(group.average), backgroundColor: getGradeSubtleBg(group.average) }"
+                  >
                     {{ group.average.toFixed(1) }}
                   </span>
                 </div>
