@@ -31,6 +31,7 @@
         @update:selectedFormat="lessonsData.selectedFormat.value = $event"
         @update:sortBy="lessonsData.sortBy.value = $event"
         @update:sortOrder="lessonsData.sortOrder.value = $event"
+        @openCategoriesManagement="openCategoriesManagement"
       />
 
       <!-- Статистика -->
@@ -188,6 +189,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import RoleGuard from '../components/RoleGuard.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
@@ -227,6 +229,7 @@ const lessonsData = useLessonsData()
 const crudOperations = useCrudOperations()
 const confirmDialog = useConfirmDialog()
 const lessonItems = useLessonItems()
+const router = useRouter()
 
 // Состояние раскрытых тем
 const expandedThemes = ref(new Set())
@@ -588,6 +591,10 @@ function toggleLesson(lessonId) {
   } else {
     expandedLessons.value.add(lessonId)
   }
+}
+
+function openCategoriesManagement() {
+  router.push({ name: 'LMSCategoriesAndFormats' })
 }
 
 // Методы для тестов

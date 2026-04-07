@@ -15,7 +15,16 @@
         />
       </div>
       <div class="col-lg-4">
-        <label class="form-label">Категория</label>
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <label class="form-label mb-0">Категория</label>
+          <button
+            type="button"
+            class="btn btn-link btn-sm p-0"
+            @click="$emit('openCategoriesManagement')"
+          >
+            Управление
+          </button>
+        </div>
         <select :value="selectedCategory" @input="$emit('update:selectedCategory', $event.target.value)" class="form-select">
           <option value="">Все категории</option>
           <option v-for="category in categories" :key="category.id" :value="category.id">
@@ -67,7 +76,15 @@ const props = defineProps({
   courseFormats: Array
 })
 
-const emit = defineEmits(['update:selectedCourseId', 'update:searchQuery', 'update:selectedCategory', 'update:selectedFormat', 'update:sortBy', 'update:sortOrder'])
+const emit = defineEmits([
+  'update:selectedCourseId',
+  'update:searchQuery',
+  'update:selectedCategory',
+  'update:selectedFormat',
+  'update:sortBy',
+  'update:sortOrder',
+  'openCategoriesManagement'
+])
 
 const selectedSortOption = computed(() => `${props.sortBy || 'name'}:${props.sortOrder || 'asc'}`)
 
