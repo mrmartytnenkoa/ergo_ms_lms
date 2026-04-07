@@ -2,8 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import {
   BookOpen, FileCheck, Award, Clock, TrendingUp, Users, Star,
-  GraduationCap, ClipboardCheck, Play, ArrowUpRight,
-  ArrowDownRight, Calendar, MapPin, Bell, Flame, Rocket, Globe,
+  GraduationCap, ClipboardCheck, Play, Calendar, MapPin, Bell, Flame, Rocket, Globe,
   Timer, ChevronRight, Search, Layout, Activity, Library, Shield,
   PenTool, Target, Zap
 } from 'lucide-vue-next'
@@ -91,6 +90,10 @@ const maxWeeklyHours = computed(() => {
 const totalWeeklyHours = computed(() => {
   if (!dashboardData.value.weeklyActivity?.length) return 0
   return dashboardData.value.weeklyActivity.reduce((sum, d) => sum + d.hours, 0)
+})
+
+const displayedRecentCourses = computed(() => {
+  return (dashboardData.value.recentCourses || []).slice(0, 3)
 })
 
 const welcomeMessage = computed(() => {
@@ -202,41 +205,10 @@ onMounted(() => loadDashboardData())
     </div>
 
     <template v-else>
-      <!-- Статистические карточки -->
-      <div class="row mb-4 g-3">
-        <div
-          v-for="(stat, key) in dashboardData.stats"
-          :key="key"
-          class="col-xl-3 col-md-6"
-        >
-          <div class="card stat-card border-0 shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div class="stat-icon-wrapper" :class="`bg-${stat.color}-subtle`">
-                <component :is="resolveIcon(stat.icon)" :size="22" :class="`text-${stat.color}`" />
-              </div>
-              <div class="flex-grow-1">
-                <p class="stat-label text-muted mb-1">{{ stat.label }}</p>
-                <div class="d-flex align-items-baseline gap-2">
-                  <h3 class="stat-value mb-0">{{ stat.value }}</h3>
-                  <span
-                    v-if="stat.trend !== undefined && stat.trend !== 0"
-                    class="stat-trend d-flex align-items-center"
-                    :class="stat.trend > 0 ? 'text-success' : 'text-danger'"
-                  >
-                    <component :is="stat.trend > 0 ? ArrowUpRight : ArrowDownRight" :size="14" />
-                    <small>{{ Math.abs(stat.trend) }}</small>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="row g-3">
         <!-- Текущие курсы -->
         <div class="col-lg-8 mb-3">
-          <div class="card border-0 shadow-sm h-100">
+          <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-3">
               <div class="d-flex align-items-center gap-2">
                 <BookOpen :size="18" class="text-primary" />
@@ -247,14 +219,14 @@ onMounted(() => loadDashboardData())
               </button>
             </div>
             <div class="card-body p-0">
-              <div v-if="!dashboardData.recentCourses?.length" class="text-center py-5 text-muted">
+              <div v-if="!displayedRecentCourses.length" class="text-center py-5 text-muted">
                 <BookOpen :size="40" class="mb-2 opacity-50" />
                 <p class="mb-1">Нет активных курсов</p>
                 <small>Запишитесь на курсы в каталоге</small>
               </div>
               <div v-else class="course-list">
                 <div
-                  v-for="course in dashboardData.recentCourses"
+                  v-for="course in displayedRecentCourses"
                   :key="course.id"
                   class="course-item d-flex align-items-center gap-3 px-3 py-3"
                   @click="goToCourse(course)"
@@ -433,9 +405,14 @@ onMounted(() => loadDashboardData())
       <div class="row g-3 mb-3">
         <div class="col-12">
           <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent d-flex align-items-center gap-2 py-3">
-              <Award :size="18" class="text-warning" />
-              <h6 class="mb-0 fw-semibold">Достижения</h6>
+            <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-3">
+              <div class="d-flex align-items-center gap-2">
+                <Award :size="18" class="text-warning" />
+                <h6 class="mb-0 fw-semibold">Достижения</h6>
+              </div>
+              <button class="btn btn-sm btn-link text-decoration-none p-0" @click="goToRoute('LMSBadges')">
+                Все достижения <ChevronRight :size="14" class="align-middle" />
+              </button>
             </div>
             <div class="card-body">
               <div v-if="!dashboardData.achievements?.length" class="text-center py-4 text-muted">
