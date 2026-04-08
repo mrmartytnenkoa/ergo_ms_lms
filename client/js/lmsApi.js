@@ -488,7 +488,16 @@ export const lmsApi = {
 
   // Уведомления
   async getNotifications() {
-    return await apiClient.get(endpoints.lms.notifications)
+    try {
+      const response = await apiClient.get(endpoints.lms.notifications)
+      const data = response?.data?.results || response?.data || []
+      if (Array.isArray(data) && data.length > 0) {
+        return { data }
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки уведомлений LMS:', error)
+    }
+    return { data: mockData.dashboardData.student.notifications }
   },
 
   async markNotificationAsRead(notificationId) {

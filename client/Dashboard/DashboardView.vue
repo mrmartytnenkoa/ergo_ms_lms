@@ -96,6 +96,10 @@ const displayedRecentCourses = computed(() => {
   return (dashboardData.value.recentCourses || []).slice(0, 3)
 })
 
+const displayedNotifications = computed(() => {
+  return (dashboardData.value.notifications || []).slice(0, 5)
+})
+
 const welcomeMessage = computed(() => {
   const hour = new Date().getHours()
   let greeting = 'Добрый день'
@@ -308,7 +312,7 @@ onMounted(() => loadDashboardData())
       <div class="row g-3">
         <!-- Предстоящие события -->
         <div class="col-lg-6 mb-3">
-          <div class="card border-0 shadow-sm h-100">
+          <div class="card border-0 shadow-sm h-100 dashboard-paired-card dashboard-events-card">
             <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-3">
               <div class="d-flex align-items-center gap-2">
                 <Calendar :size="18" class="text-warning" />
@@ -318,7 +322,7 @@ onMounted(() => loadDashboardData())
                 Все <ChevronRight :size="14" class="align-middle" />
               </button>
             </div>
-            <div class="card-body">
+            <div class="card-body dashboard-paired-body">
               <div v-if="!dashboardData.upcomingEvents?.length" class="text-center py-4 text-muted">
                 <Calendar :size="36" class="mb-2 opacity-50" />
                 <p class="mb-0">Нет предстоящих событий</p>
@@ -357,7 +361,7 @@ onMounted(() => loadDashboardData())
 
         <!-- Уведомления -->
         <div class="col-lg-6 mb-3">
-          <div class="card border-0 shadow-sm h-100">
+          <div class="card border-0 shadow-sm h-100 dashboard-paired-card dashboard-notifications-card">
             <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-3">
               <div class="d-flex align-items-center gap-2">
                 <Bell :size="18" class="text-danger" />
@@ -373,14 +377,14 @@ onMounted(() => loadDashboardData())
                 Все уведомления <ChevronRight :size="14" class="align-middle" />
               </button>
             </div>
-            <div class="card-body">
+            <div class="card-body dashboard-paired-body">
               <div v-if="!dashboardData.notifications?.length" class="text-center py-4 text-muted">
                 <Bell :size="36" class="mb-2 opacity-50" />
                 <p class="mb-0">Нет новых уведомлений</p>
               </div>
               <div v-else>
                 <div
-                  v-for="notification in dashboardData.notifications"
+                  v-for="notification in displayedNotifications"
                   :key="notification.id"
                   class="notification-item d-flex gap-3 mb-3"
                   :class="{ 'notification-unread': !notification.read }"

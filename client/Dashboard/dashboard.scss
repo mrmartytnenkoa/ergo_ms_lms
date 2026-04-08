@@ -132,6 +132,21 @@
     }
   }
 
+  .dashboard-paired-card {
+    .dashboard-paired-body {
+      min-height: 340px;
+      max-height: 340px;
+      overflow: hidden;
+    }
+  }
+
+  .dashboard-events-card {
+    .dashboard-paired-body {
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+  }
+
   .notification-item {
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--bs-border-color-translucent);
@@ -226,6 +241,14 @@
     .quick-action-btn {
       font-size: 0.75rem;
       padding: 0.25rem 0.5rem;
+    }
+
+    .dashboard-paired-card {
+      .dashboard-paired-body {
+        min-height: auto;
+        max-height: none;
+        overflow-y: visible;
+      }
     }
   }
 }

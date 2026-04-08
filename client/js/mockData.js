@@ -258,7 +258,19 @@ export default {
         { id: 3, type: 'badge', message: 'Вы получили значок «Прилежный студент» за 7 дней подряд', createdAt: '2026-03-03T12:00:00', read: true },
         { id: 4, type: 'enrollment', message: 'Вы успешно записаны на курс «Основы Data Science»', createdAt: '2026-03-01T10:00:00', read: true },
         { id: 5, type: 'info', message: 'Плановое обслуживание платформы 12 марта с 02:00 до 04:00', createdAt: '2026-02-28T18:00:00', read: true },
-        { id: 6, type: 'grading', message: 'Тест «Основы HTML» проверен — результат: 88/100', createdAt: '2026-02-27T14:20:00', read: true }
+        { id: 6, type: 'grading', message: 'Тест «Основы HTML» проверен — результат: 88/100', createdAt: '2026-02-27T14:20:00', read: true },
+        { id: 7, type: 'warning', message: 'Дедлайн по проекту «REST API на Django» через 6 часов', createdAt: '2026-03-05T12:10:00', read: false },
+        { id: 8, type: 'assignment', message: 'В курсе «Data Science» опубликовано практическое задание «Очистка датасета»', createdAt: '2026-03-05T10:25:00', read: false },
+        { id: 9, type: 'info', message: 'Расписание вебинара «Карьера в IT» обновлено: начало в 16:00', createdAt: '2026-03-05T09:50:00', read: false },
+        { id: 10, type: 'success', message: 'Домашняя работа «Адаптивная галерея» успешно отправлена на проверку', createdAt: '2026-03-04T21:05:00', read: true },
+        { id: 11, type: 'error', message: 'Не удалось прикрепить файл к заданию «SQL-запросы». Повторите загрузку.', createdAt: '2026-03-04T20:10:00', read: false },
+        { id: 12, type: 'badge', message: 'Открыт прогресс по достижению «Марафонец»: 47 из 100 часов', createdAt: '2026-03-04T19:15:00', read: true },
+        { id: 13, type: 'grading', message: 'Промежуточный тест по SQL проверен — результат: 92/100', createdAt: '2026-03-04T18:30:00', read: false },
+        { id: 14, type: 'enrollment', message: 'Вы добавлены в учебную группу «Python Advanced Evening»', createdAt: '2026-03-04T17:40:00', read: true },
+        { id: 15, type: 'warning', message: 'У вас 2 непройденных обязательных урока в курсе «Основы Python»', createdAt: '2026-03-03T19:45:00', read: true },
+        { id: 16, type: 'info', message: 'Преподаватель оставил комментарий к вашему ответу в форуме курса', createdAt: '2026-03-03T17:20:00', read: false },
+        { id: 17, type: 'success', message: 'Синхронизация календаря с личным расписанием завершена', createdAt: '2026-03-03T08:10:00', read: true },
+        { id: 18, type: 'assignment', message: 'Открыт доступ к заданию «Семантическая верстка лендинга»', createdAt: '2026-03-02T15:00:00', read: true }
       ],
       achievements: [
         { id: 1, title: 'Первый шаг', description: 'Завершить первый урок', icon: 'Rocket', earned: true, earnedAt: '2026-01-15T10:00:00' },
