@@ -151,6 +151,11 @@ export default {
     "path": "/lms/integrations",
     "component": "@/modules/lms/client/Integrations/IntegrationsView.vue",
     "meta": { "title": "Интеграции", "requiresAuth": true }
+  },
+  "LMSNotifications": {
+    "path": "/lms/notifications",
+    "component": "@/modules/lms/client/Notifications/NotificationsView.vue",
+    "meta": { "title": "Уведомления", "requiresAuth": true }
   }
 }
 

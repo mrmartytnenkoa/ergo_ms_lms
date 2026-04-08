@@ -369,6 +369,9 @@ onMounted(() => loadDashboardData())
                   {{ dashboardData.notifications.filter(n => !n.read).length }}
                 </span>
               </div>
+              <button class="btn btn-sm btn-link text-decoration-none p-0" @click="goToRoute('LMSNotifications')">
+                Все уведомления <ChevronRight :size="14" class="align-middle" />
+              </button>
             </div>
             <div class="card-body">
               <div v-if="!dashboardData.notifications?.length" class="text-center py-4 text-muted">
