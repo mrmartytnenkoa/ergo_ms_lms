@@ -186,6 +186,7 @@ export function useUserRole() {
       { route: 'LMSTests', label: 'Тесты', roles: ['student'] },
       { route: 'LMSGrades', label: 'Оценки', roles: ['student', 'admin', 'teacher'] },
       { route: 'LMSTeaching', label: 'Преподавание', roles: ['teacher', 'admin'] },
+      { route: 'LMSLearningTrajectories', label: 'Траектории обучения', roles: ['teacher', 'admin'] },
 
       { route: 'LMSApplicantProfile', label: 'Мой профиль', roles: ['applicant'] },
       { route: 'LMSDiagnostics', label: 'Диагностика', roles: ['applicant'] },

@@ -89,12 +89,12 @@
       <!-- График траектории -->
       <div class="row g-3 mb-4">
         <div class="col-lg-8">
-          <div class="card">
+          <div class="card h-100 trajectory-card">
             <div class="card-header">
               <h5 class="card-title mb-0">Траектория взаимодействия</h5>
             </div>
             <div class="card-body">
-              <div class="timeline-container" style="min-height: 400px;">
+              <div class="timeline-container">
                 <div v-for="(event, index) in timelineEvents" :key="index" class="timeline-item mb-4">
                   <div class="d-flex">
                     <div class="timeline-marker flex-shrink-0">
@@ -132,7 +132,7 @@
 
         <!-- Статистика по курсам -->
         <div class="col-lg-4">
-          <div class="card">
+          <div class="card h-100 courses-card">
             <div class="card-header">
               <h5 class="card-title mb-0">Популярные курсы</h5>
             </div>
@@ -424,6 +424,14 @@ onMounted(() => {
 
 .timeline-container {
   position: relative;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.trajectory-card .card-body {
+  display: flex;
+  flex-direction: column;
 }
 
 .timeline-item {

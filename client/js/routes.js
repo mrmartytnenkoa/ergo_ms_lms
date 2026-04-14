@@ -87,6 +87,14 @@ export default {
       "requiresAuth": true
     }
   },
+  "LMSLearningTrajectories": {
+    "path": "/lms/learning-trajectories",
+    "component": "@/modules/lms/client/LearningTrajectories/LearningTrajectoriesView.vue",
+    "meta": {
+      "title": "Траектории обучения",
+      "requiresAuth": true
+    }
+  },
   "LMSApplicantProfile": {
     "path": "/lms/applicant-profile",
     "component": "@/modules/lms/client/ApplicantProfile/ApplicantProfileView.vue",

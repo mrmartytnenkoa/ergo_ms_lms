@@ -274,7 +274,7 @@ onMounted(async () => {
     <!-- Hero -->
     <div class="catalog-hero">
       <h2 class="mb-2">Каталог курсов</h2>
-      <p class="text-white-50 mb-3">Выберите курс и начните обучение уже сегодня</p>
+      <p class="text-muted mb-3">Выберите курс и начните обучение уже сегодня</p>
       <div class="catalog-search">
         <div class="input-group">
           <span class="input-group-text bg-white border-end-0">
@@ -294,7 +294,7 @@ onMounted(async () => {
             <X :size="16" />
           </button>
         </div>
-        <small class="text-white-50 mt-1 d-block">
+        <small class="text-muted mt-1 d-block">
           Найдено: {{ filteredCourses.length }} из {{ courses.length }} курсов
         </small>
       </div>

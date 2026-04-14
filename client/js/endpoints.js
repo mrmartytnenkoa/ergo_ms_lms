@@ -90,7 +90,10 @@ export const lmsEndpoints = {
         answerDetail: id => `lms/answers/${id}/`,
         
         // Аналитика прогресса
-        studentProgress: 'lms/analytics/student/progress/'
+        studentProgress: 'lms/analytics/student/progress/',
+
+        // Траектории обучения (справочник / обзор для преподавателей и админов)
+        learningTrajectories: 'lms/learning-trajectories/'
     }
 };
 

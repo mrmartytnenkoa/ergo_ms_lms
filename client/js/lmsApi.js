@@ -565,6 +565,15 @@ export const lmsApi = {
     return { data: mockData.trajectory }
   },
 
+  async getLearningTrajectoriesOverview() {
+    const heavy =
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('trajectoryDemo') === 'heavy'
+    return {
+      data: heavy ? mockData.learningTrajectoriesOverviewHeavy : mockData.learningTrajectoriesOverview
+    }
+  },
+
   async buildTrajectory(params) {
     return { data: mockData.trajectory }
   },
