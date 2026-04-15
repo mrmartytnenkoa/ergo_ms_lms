@@ -1,0 +1,119 @@
+.wpc-view {
+  padding: 0;
+
+  .wpc-hero {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.75rem 1.5rem 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--bs-body-color);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+
+  .wpc-hero__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .wpc-hero__title {
+    font-weight: 700;
+    font-size: 1.65rem;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .wpc-hero__subtitle {
+    margin: 0.5rem 0 0;
+    max-width: 42rem;
+    font-size: 0.95rem;
+  }
+
+  .wpc-toolbar {
+    border-radius: 12px;
+    border: 1px solid var(--bs-border-color);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.05);
+  }
+
+  .wpc-filter-pills .btn {
+    border-radius: 2rem;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.875rem;
+  }
+
+  .wpc-program-card {
+    border-radius: 12px;
+    border: 1px solid var(--bs-border-color);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wpc-program-card:hover {
+    border-color: rgba(var(--bs-primary-rgb), 0.35);
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+  }
+
+  .wpc-program-card__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wpc-program-card__title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .wpc-program-card__code {
+    font-size: 0.8rem;
+    font-family: ui-monospace, monospace;
+    color: var(--bs-secondary-color);
+  }
+
+  .wpc-meta-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.35rem;
+  }
+
+  .wpc-sections-panel {
+    border-top: 1px solid var(--bs-border-color);
+    margin-top: auto;
+    padding-top: 0.75rem;
+  }
+
+  .wpc-section-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    font-size: 0.875rem;
+    border-bottom: 1px dashed var(--bs-border-color);
+  }
+
+  .wpc-section-row:last-child {
+    border-bottom: none;
+  }
+
+  .wpc-skeleton .placeholder {
+    border-radius: 8px;
+  }
+
+  .wpc-empty {
+    border-radius: 12px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    background: var(--bs-tertiary-bg);
+    border: 1px dashed var(--bs-border-color);
+  }
+}

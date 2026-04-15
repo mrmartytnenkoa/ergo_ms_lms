@@ -103,6 +103,14 @@ export default {
       "requiresAuth": true
     }
   },
+  "LMSWorkProgramsConstructor": {
+    "path": "/lms/work-programs-constructor",
+    "component": "@/modules/lms/client/WorkProgramsConstructor/WorkProgramsConstructorView.vue",
+    "meta": {
+      "title": "Конструктор рабочих программ",
+      "requiresAuth": true
+    }
+  },
   "LMSApplicantProfile": {
     "path": "/lms/applicant-profile",
     "component": "@/modules/lms/client/ApplicantProfile/ApplicantProfileView.vue",

@@ -188,6 +188,7 @@ export function useUserRole() {
       { route: 'LMSTeaching', label: 'Преподавание', roles: ['teacher', 'admin'] },
       { route: 'LMSLearningTrajectories', label: 'Траектории обучения', roles: ['teacher', 'admin'] },
       { route: 'LMSStudyPlansConstructor', label: 'Конструктор учебных планов', roles: ['teacher', 'admin'] },
+      { route: 'LMSWorkProgramsConstructor', label: 'Конструктор рабочих программ', roles: ['teacher', 'admin'] },
 
       { route: 'LMSApplicantProfile', label: 'Мой профиль', roles: ['applicant'] },
       { route: 'LMSDiagnostics', label: 'Диагностика', roles: ['applicant'] },

@@ -738,6 +738,123 @@ export default {
     }
   ],
 
+  workPrograms: [
+    {
+      id: 1,
+      code: 'Б1.В.ОД.3.1.01',
+      title: 'Программирование на языке Python',
+      department: 'Кафедра информатики и программирования',
+      status: 'published',
+      totalHours: 180,
+      credits: 5,
+      semester: '2025/2026, осенний',
+      completionPercent: 100,
+      updatedAt: '2026-02-28T10:00:00',
+      author: 'Козлов А.В.',
+      sections: [
+        { order: 1, title: 'Цели и задачи дисциплины, место в структуре ОП', hours: 4, type: 'theory' },
+        { order: 2, title: 'Содержание теоретического обучения', hours: 72, type: 'theory' },
+        { order: 3, title: 'Практические и лабораторные работы', hours: 84, type: 'practice' },
+        { order: 4, title: 'Текущий контроль и промежуточная аттестация', hours: 12, type: 'control' },
+        { order: 5, title: 'Итоговая аттестация (экзамен)', hours: 8, type: 'control' }
+      ]
+    },
+    {
+      id: 2,
+      code: 'Б1.В.ОД.2.15',
+      title: 'Базы данных и системы управления базами данных',
+      department: 'Кафедра прикладной информатики',
+      status: 'review',
+      totalHours: 144,
+      credits: 4,
+      semester: '2025/2026, весенний',
+      completionPercent: 68,
+      updatedAt: '2026-03-08T14:30:00',
+      author: 'Новиков И.П.',
+      sections: [
+        { order: 1, title: 'Компетенции и результаты обучения', hours: 6, type: 'theory' },
+        { order: 2, title: 'Реляционная модель и SQL', hours: 48, type: 'mixed' },
+        { order: 3, title: 'Проектирование и нормализация', hours: 36, type: 'practice' },
+        { order: 4, title: 'Защита курсового проекта', hours: 54, type: 'control' }
+      ]
+    },
+    {
+      id: 3,
+      code: 'Б1.В.ОД.4.05',
+      title: 'Веб-технологии и основы клиентской разработки (HTML, CSS, JavaScript)',
+      department: 'Кафедра информатики и программирования',
+      status: 'draft',
+      totalHours: 216,
+      credits: 6,
+      semester: '2026/2027, осенний',
+      completionPercent: 22,
+      updatedAt: '2026-03-01T09:00:00',
+      author: 'Петрова М.С.',
+      sections: [
+        { order: 1, title: 'Рабочая программа и календарный график', hours: 2, type: 'theory' },
+        { order: 2, title: 'Верстка и адаптивность', hours: 90, type: 'mixed' },
+        { order: 3, title: 'Клиентские сценарии и DOM', hours: 72, type: 'practice' }
+      ]
+    },
+    {
+      id: 4,
+      code: 'Б1.В.ОД.1.03',
+      title: 'Математический анализ',
+      department: 'Кафедра высшей математики',
+      status: 'published',
+      totalHours: 288,
+      credits: 8,
+      semester: '2024/2025, полный год',
+      completionPercent: 100,
+      updatedAt: '2025-12-15T16:45:00',
+      author: 'Кафедра высшей математики',
+      sections: [
+        { order: 1, title: 'Пределы и непрерывность', hours: 36, type: 'theory' },
+        { order: 2, title: 'Дифференциальное исчисление', hours: 54, type: 'theory' },
+        { order: 3, title: 'Интегральное исчисление', hours: 54, type: 'mixed' },
+        { order: 4, title: 'Ряды и практикум', hours: 108, type: 'practice' },
+        { order: 5, title: 'Экзаменационный блок', hours: 36, type: 'control' }
+      ]
+    },
+    {
+      id: 5,
+      code: 'Б1.В.ОД.5.12',
+      title: 'Экономика и управление проектами в IT',
+      department: 'Кафедра менеджмента и экономики',
+      status: 'draft',
+      totalHours: 108,
+      credits: 3,
+      semester: '2026/2027, весенний',
+      completionPercent: 10,
+      updatedAt: '2026-01-20T11:00:00',
+      author: 'Волкова Т.А.',
+      sections: [
+        { order: 1, title: 'Основы экономики для IT-специалистов', hours: 24, type: 'theory' },
+        { order: 2, title: 'Управление проектами: Agile/Scrum', hours: 48, type: 'mixed' },
+        { order: 3, title: 'Практикум по кейсам', hours: 36, type: 'practice' }
+      ]
+    },
+    {
+      id: 6,
+      code: 'М1.О.04',
+      title: 'Методы машинного обучения',
+      department: 'Кафедра искусственного интеллекта',
+      status: 'review',
+      totalHours: 162,
+      credits: 4,
+      semester: '2025/2026, весенний',
+      completionPercent: 45,
+      updatedAt: '2026-03-11T12:15:00',
+      author: 'Сидоренко Е.К.',
+      sections: [
+        { order: 1, title: 'Результаты обучения магистрантов', hours: 4, type: 'theory' },
+        { order: 2, title: 'Обучение с учителем и без', hours: 48, type: 'mixed' },
+        { order: 3, title: 'Нейросетевые модели', hours: 56, type: 'practice' },
+        { order: 4, title: 'Зачёт с устной компонентой', hours: 54, type: 'control' }
+      ]
+    }
+  ],
+
   lessonsManagement: {
     categories: [
       { id: 1, name: 'Программирование', description: 'Курсы по языкам программирования, алгоритмам и разработке ПО', parent: null, sort_order: 1, is_visible: true, courses_count: 18, icon: 'Code', color: 'primary' },

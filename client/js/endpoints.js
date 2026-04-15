@@ -96,7 +96,10 @@ export const lmsEndpoints = {
         learningTrajectories: 'lms/learning-trajectories/',
 
         // Учебные планы (конструктор; REST в modules/lms/api — по мере реализации)
-        studyPlans: 'lms/study-plans/'
+        studyPlans: 'lms/study-plans/',
+
+        // Рабочие программы дисциплин (конструктор; REST в modules/lms/api — по мере реализации)
+        workPrograms: 'lms/work-programs/'
     }
 };
 
