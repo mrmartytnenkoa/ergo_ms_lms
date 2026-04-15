@@ -574,6 +574,23 @@ export const lmsApi = {
     }
   },
 
+  async getStudyPlansList(filters = {}) {
+    let result = [...mockData.studyPlans]
+    if (filters.status) {
+      result = result.filter(p => p.status === filters.status)
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      result = result.filter(
+        p =>
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.code && p.code.toLowerCase().includes(q)) ||
+          (p.author && String(p.author).toLowerCase().includes(q))
+      )
+    }
+    return { data: result }
+  },
+
   async buildTrajectory(params) {
     return { data: mockData.trajectory }
   },

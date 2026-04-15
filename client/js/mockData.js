@@ -621,6 +621,123 @@ export default {
     { id: 4, name: 'Электронный дневник', type: 'other', status: 'error', lastSync: '2026-02-28T08:00:00', settings: { url: 'https://diary.example.ru', apiKey: '****-****-****-9012' }, description: 'Синхронизация успеваемости учащихся' }
   ],
 
+  studyPlans: [
+    {
+      id: 1,
+      code: '09.03.04-1',
+      name: 'Программная инженерия, очная форма, 4 года',
+      level: 'Бакалавриат',
+      status: 'published',
+      totalHours: 3888,
+      credits: 240,
+      academicYear: '2025/2026',
+      completionPercent: 100,
+      updatedAt: '2026-03-01T14:20:00',
+      author: 'Кафедра программной инженерии',
+      modules: [
+        { order: 1, title: 'Информатика и программирование', hours: 540, type: 'lecture' },
+        { order: 2, title: 'Дискретная математика', hours: 216, type: 'mixed' },
+        { order: 3, title: 'Алгоритмы и структуры данных', hours: 288, type: 'practice' },
+        { order: 4, title: 'Базы данных', hours: 180, type: 'mixed' },
+        { order: 5, title: 'Государственный экзамен (защита ВКР)', hours: 216, type: 'exam' }
+      ]
+    },
+    {
+      id: 2,
+      code: '01.04.02-маг',
+      name: 'Прикладная математика и информатика (профиль «Машинное обучение»), магистратура',
+      level: 'Магистратура',
+      status: 'review',
+      totalHours: 1872,
+      credits: 120,
+      academicYear: '2025/2026',
+      completionPercent: 72,
+      updatedAt: '2026-03-10T09:45:00',
+      author: 'Иванова А.П.',
+      modules: [
+        { order: 1, title: 'Современные методы оптимизации', hours: 144, type: 'lecture' },
+        { order: 2, title: 'Глубокое обучение', hours: 180, type: 'mixed' },
+        { order: 3, title: 'Научно-исследовательская практика', hours: 216, type: 'practice' },
+        { order: 4, title: 'Подготовка к итоговой аттестации', hours: 72, type: 'exam' }
+      ]
+    },
+    {
+      id: 3,
+      code: '38.03.05-оч',
+      name: 'Бизнес-информатика: цифровая трансформация предприятий',
+      level: 'Бакалавриат',
+      status: 'draft',
+      totalHours: 4032,
+      credits: 240,
+      academicYear: '2026/2027',
+      completionPercent: 28,
+      updatedAt: '2026-02-18T16:00:00',
+      author: 'Петров Д.С.',
+      modules: [
+        { order: 1, title: 'Экономика организации', hours: 180, type: 'lecture' },
+        { order: 2, title: 'Информационные системы в управлении', hours: 144, type: 'mixed' },
+        { order: 3, title: 'Проектный семинар: ERP и CRM', hours: 288, type: 'practice' }
+      ]
+    },
+    {
+      id: 4,
+      code: '27.03.03-заоч',
+      name: 'Системный анализ и управление (заочная форма, ускоренная программа)',
+      level: 'Бакалавриат',
+      status: 'published',
+      totalHours: 3240,
+      credits: 240,
+      academicYear: '2024/2025',
+      completionPercent: 100,
+      updatedAt: '2025-12-20T11:30:00',
+      author: 'Кафедра системного анализа',
+      modules: [
+        { order: 1, title: 'Математическое моделирование', hours: 216, type: 'lecture' },
+        { order: 2, title: 'Операционные исследования', hours: 180, type: 'mixed' },
+        { order: 3, title: 'Системная инженерия', hours: 144, type: 'practice' },
+        { order: 4, title: 'Итоговый междисциплинарный экзамен', hours: 72, type: 'exam' }
+      ]
+    },
+    {
+      id: 5,
+      code: '09.03.01-вк',
+      name: 'Информатика и вычислительная техника (вечерняя форма)',
+      level: 'Бакалавриат',
+      status: 'draft',
+      totalHours: 4104,
+      credits: 240,
+      academicYear: '2026/2027',
+      completionPercent: 15,
+      updatedAt: '2026-01-05T10:15:00',
+      author: 'Сидорова М.К.',
+      modules: [
+        { order: 1, title: 'Архитектура вычислительных систем', hours: 216, type: 'lecture' },
+        { order: 2, title: 'Операционные системы', hours: 180, type: 'mixed' },
+        { order: 3, title: 'Сети и телекоммуникации', hours: 144, type: 'practice' },
+        { order: 4, title: 'Электив по выбору студента', hours: 108, type: 'mixed' }
+      ]
+    },
+    {
+      id: 6,
+      code: '40.05.01-асп',
+      name: 'Правовое обеспечение национальной безопасности (аспирантура, очно-заочная)',
+      level: 'Аспирантура',
+      status: 'review',
+      totalHours: 936,
+      credits: 54,
+      academicYear: '2025/2026',
+      completionPercent: 55,
+      updatedAt: '2026-03-12T13:00:00',
+      author: 'Юридический институт',
+      modules: [
+        { order: 1, title: 'История и философия науки', hours: 180, type: 'lecture' },
+        { order: 2, title: 'Иностранный язык в профессиональной деятельности', hours: 144, type: 'practice' },
+        { order: 3, title: 'Спецкурс по теме диссертации', hours: 360, type: 'mixed' },
+        { order: 4, title: 'Научно-исследовательская работа', hours: 252, type: 'practice' }
+      ]
+    }
+  ],
+
   lessonsManagement: {
     categories: [
       { id: 1, name: 'Программирование', description: 'Курсы по языкам программирования, алгоритмам и разработке ПО', parent: null, sort_order: 1, is_visible: true, courses_count: 18, icon: 'Code', color: 'primary' },

@@ -95,6 +95,14 @@ export default {
       "requiresAuth": true
     }
   },
+  "LMSStudyPlansConstructor": {
+    "path": "/lms/study-plans-constructor",
+    "component": "@/modules/lms/client/StudyPlansConstructor/StudyPlansConstructorView.vue",
+    "meta": {
+      "title": "Конструктор учебных планов",
+      "requiresAuth": true
+    }
+  },
   "LMSApplicantProfile": {
     "path": "/lms/applicant-profile",
     "component": "@/modules/lms/client/ApplicantProfile/ApplicantProfileView.vue",

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { GraduationCap, BookOpen, FileCheck, Award, Calendar, ChartBar, Settings, User, Library, Brain, Map, Briefcase, Search, Route, GitCompare, CalendarDays, Activity, BarChart3, FileText, Users, Link, Bell, GitBranch } from 'lucide-vue-next'
+import { GraduationCap, BookOpen, FileCheck, Award, Calendar, ChartBar, Settings, User, Library, Brain, Map, Briefcase, Search, Route, GitCompare, CalendarDays, Activity, BarChart3, FileText, Users, Link, Bell, GitBranch, ClipboardList } from 'lucide-vue-next'
 
 import NavigationButtons from '@/components/NavigationButtons.vue'
 import RoleSwitcher from './components/RoleSwitcher.vue'
@@ -29,6 +29,7 @@ const navigationButtons = computed(() => {
     { icon: Settings, title: 'Управление курсами', link: 'LMSLessonsManagement', roles: ['teacher', 'admin'] },
     { icon: Settings, title: 'Структура курсов', link: 'LMSCategoriesAndFormats', roles: ['teacher', 'admin'] },
     { icon: GitBranch, title: 'Траектории обучения', link: 'LMSLearningTrajectories', roles: ['teacher', 'admin'] },
+    { icon: ClipboardList, title: 'Конструктор учебных планов', link: 'LMSStudyPlansConstructor', roles: ['teacher', 'admin'] },
 
     // Абитуриент
     { icon: User, title: 'Мой профиль', link: 'LMSApplicantProfile', roles: ['applicant'] },

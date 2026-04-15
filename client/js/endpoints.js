@@ -93,7 +93,10 @@ export const lmsEndpoints = {
         studentProgress: 'lms/analytics/student/progress/',
 
         // Траектории обучения (справочник / обзор для преподавателей и админов)
-        learningTrajectories: 'lms/learning-trajectories/'
+        learningTrajectories: 'lms/learning-trajectories/',
+
+        // Учебные планы (конструктор; REST в modules/lms/api — по мере реализации)
+        studyPlans: 'lms/study-plans/'
     }
 };
 
